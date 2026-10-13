@@ -13,15 +13,21 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
-.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
-header.top{margin-bottom:18px}
+html,body{overflow-x:hidden;max-width:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;overscroll-behavior-x:none;-webkit-text-size-adjust:100%}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px 48px}
+header.top{position:sticky;top:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 12px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+header.top>div{min-width:0}
+.menuBtn{flex:none;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--line);background:#1b1b1e;color:var(--fg);cursor:pointer}
+.menuBtn svg{width:22px;height:22px}
+@media (max-width:760px){header.top{padding:10px 0}header.top h1{font-size:18px}header.top .sub{display:none}}
+.linkBtn{appearance:none;background:none;border:0;padding:0;color:var(--gold);font:inherit;font-weight:700;cursor:pointer;text-align:left}
 h1{font-family:var(--display);font-size:22px;letter-spacing:-.01em;margin:0;text-wrap:balance}
 h1 span{color:var(--gold)}
 .sub{color:var(--muted);font-size:13px;margin:2px 0 0}
 .grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;align-items:start}
 @media (max-width:760px){.grid{grid-template-columns:1fr}}
-.stage{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px;align-items:center}
+.stage{position:sticky;top:84px;display:flex;flex-direction:column;gap:10px;align-items:center}
 @media (max-width:760px){.stage{position:static}}
 .phone{width:100%;max-width:300px;aspect-ratio:9/16;border-radius:22px;overflow:hidden;border:1px solid var(--line);background:#000;position:relative}
 .phone canvas{width:100%;height:100%;display:block}
@@ -33,7 +39,7 @@ h1 span{color:var(--gold)}
 .sec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .sec h2{font-family:var(--display);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
-input[type=text],textarea{width:100%;background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px}
+input[type=text],input[type=url],input[type=email],input[type=password],textarea{width:100%;background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
 textarea{min-height:96px;resize:vertical;font-family:"Montserrat",var(--body);font-weight:600}
 input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
@@ -51,11 +57,13 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .seg button.v[aria-pressed=true]{background:#18241c;color:var(--green)}
 .range{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
 .range .lab{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:var(--gold)}
+input[type=range]{width:100%;accent-color:var(--gold);touch-action:pan-y}
 .check{display:flex;align-items:center;gap:8px;font-size:14px}
 .check input{accent-color:var(--gold);width:18px;height:18px}
-.map{position:relative;width:100%;max-width:420px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#000;touch-action:none}
-.map canvas{display:block;width:100%;height:auto;cursor:crosshair}
+.map{position:relative;width:100%;max-width:420px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#000;touch-action:pan-y}
+.map canvas{display:block;width:100%;height:auto}
+.map.editing{touch-action:none;border-color:var(--gold)}
+.map.editing canvas{cursor:crosshair}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 .chips{display:flex;flex-direction:column;gap:10px}
@@ -92,7 +100,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .sheet .head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sheet .head h3{font-family:var(--display);font-size:15px;margin:0}
 .sheet video{width:100%;max-height:44vh;object-fit:contain;background:#000;border-radius:12px;border:1px solid var(--line)}
-.sheet textarea{min-height:220px;font-family:var(--body);font-weight:500;font-size:14.5px;line-height:1.55}
+.sheet textarea{min-height:220px;font-family:var(--body);font-weight:500;font-size:16px;line-height:1.55}
 .capbar{display:flex;gap:8px;flex-wrap:wrap}
 .capbar .btn{flex:1 1 120px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .capbar svg{width:18px;height:18px}
@@ -109,15 +117,46 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .leg .acts .btn{padding:7px 12px;font-size:13px}
 .leg .acts .danger{color:#e7a0a0}
 .inst{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+/* menu lateral (⋮) */
+.drawer{position:fixed;inset:0;z-index:30;display:flex;justify-content:flex-end;background:rgba(0,0,0,.6)}
+.drawer .pane{width:min(440px,100%);height:100%;background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;overscroll-behavior:contain;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 28px);display:flex;flex-direction:column;gap:14px}
+.drHead{display:flex;align-items:center;gap:10px}
+.drHead h2{flex:1;font-family:var(--display);font-size:16px;margin:0}
+.navList{display:flex;flex-direction:column;gap:8px}
+.navItem{appearance:none;display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--fg);font:inherit;font-weight:700;font-size:15px;cursor:pointer}
+.navItem:hover{border-color:var(--gold)}
+.navItem small{font-weight:500;font-size:12.5px;color:var(--muted)}
+.drView{display:flex;flex-direction:column;gap:12px}
+/* tela de acesso */
+.gate{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto}
+.gbox{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px}
+.gbox h1{font-size:24px}
 @media (prefers-reduced-motion:reduce){.prog i{transition:none}}
 </style>
 
-<div class="wrap">
-  <header class="top">
+<div class="gate" id="gate" hidden>
+  <form class="gbox" id="gateForm" autocomplete="on">
     <h1>Estúdio de Cards <span>· @ojhonatta1</span></h1>
-    <p class="sub">Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card com o seu perfil em 1080×1920.</p>
+    <p class="hint" id="gateHint"></p>
+    <label class="f">E-mail<input type="email" id="gMail" autocomplete="username" required></label>
+    <label class="f">Senha<input type="password" id="gPass" autocomplete="current-password" required></label>
+    <label class="f" id="gPass2Wrap" hidden>Repita a senha<input type="password" id="gPass2" autocomplete="new-password"></label>
+    <button class="btn gold big" type="submit" id="gGo">Entrar</button>
+    <div class="status" id="gStatus"></div>
+    <button type="button" class="linkBtn" id="gForgot" hidden>Esqueci a senha</button>
+  </form>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>Estúdio de Cards <span>· @ojhonatta1</span></h1>
+      <p class="sub">Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card em 1080×1920.</p>
+    </div>
+    <button class="menuBtn" id="menuBtn" type="button" aria-label="Abrir menu" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   </header>
-  <div class="banner" id="aiBanner" hidden><span>A IA está desligada neste aparelho. Coloque o código de acesso em Ajustes para ler frases, criar ideias e escrever legendas.</span><a href="#cfgSec">Abrir Ajustes</a></div>
+  <div class="banner" id="aiBanner" hidden><span>A IA está desligada neste aparelho. Coloque a chave em Configurações para ler frases, criar ideias e escrever legendas.</span><button type="button" class="linkBtn" id="bannerCfg">Abrir configurações</button></div>
 
   <div class="grid">
     <div class="stage">
@@ -142,9 +181,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <div id="mapBox" hidden>
           <div class="map"><canvas id="map" aria-label="Áreas detectadas no vídeo"></canvas></div>
           <div class="legend" style="margin-top:8px"><span><i style="background:var(--green)"></i>Cena que vai para o card</span><span><i style="background:var(--gold)"></i>Texto original</span></div>
-          <div class="hint" style="margin:12px 0 6px">Errou a área? Escolha qual corrigir e arraste o dedo sobre a imagem.</div>
+          <div class="hint" style="margin:12px 0 6px">Errou a área? Toque em qual corrigir e depois arraste o dedo sobre a imagem. Fora disso a imagem fica travada e a tela rola normal.</div>
           <div class="seg" role="group" aria-label="Área para ajustar">
-            <button type="button" class="v" data-mode="video" aria-pressed="true">Ajustar cena</button>
+            <button type="button" class="v" data-mode="video" aria-pressed="false">Ajustar cena</button>
             <button type="button" data-mode="text" aria-pressed="false">Ajustar texto</button>
           </div>
           <button class="btn" id="reAnalyze" type="button" style="margin-top:10px">Detectar de novo</button>
@@ -174,7 +213,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
           <textarea id="txt">Quando você passou por várias dificuldades mas não desistiu, e enfim tudo começa a dar certo</textarea>
         </label>
         <label class="f">Do que o vídeo fala? (opcional, melhora as ideias e a legenda)
-          <textarea id="ctxIn" style="min-height:64px;font-family:var(--body);font-weight:500;font-size:14px" placeholder="Ex.: o cara fala que quem não aguenta a solidão do processo nunca vai construir nada grande. Pode colar a legenda original do post."></textarea>
+          <textarea id="ctxIn" style="min-height:64px;font-family:var(--body);font-weight:500;font-size:16px" placeholder="Ex.: o cara fala que quem não aguenta a solidão do processo nunca vai construir nada grande. Pode colar a legenda original do post."></textarea>
         </label>
         <div class="sugg" id="sugg" hidden>
           <div class="hint" id="sugTitle">Sugestões para mexer mais com o público (toque para usar)</div>
@@ -226,22 +265,36 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         </div>
       </section>
 
-      <section class="sec">
-        <h2>5 · Legendas salvas</h2>
+    </div>
+  </div>
+</div>
+
+
+<div class="drawer" id="drawer" hidden>
+  <aside class="pane" role="dialog" aria-modal="true" aria-labelledby="drTitle">
+    <div class="drHead">
+      <button class="btn" id="drBack" type="button" hidden>‹ Voltar</button>
+      <h2 id="drTitle">Menu</h2>
+      <button class="btn" id="drClose" type="button">Fechar</button>
+    </div>
+    <nav class="navList" id="drMenu">
+      <button class="navItem" type="button" data-view="leg">Legendas geradas<small>As últimas 50, para copiar de novo</small></button>
+      <button class="navItem" type="button" data-view="cfg" id="navCfg">Configurações do web app<small>Chave da IA, modelos e instalação</small></button>
+      <button class="navItem" type="button" data-view="conta" id="navConta">Conta<small id="contaMail">Acesso deste aparelho</small></button>
+    </nav>
+    <section class="drView" data-v="leg" hidden>
         <p class="hint">As últimas 50 legendas ficam guardadas aqui, mesmo depois que o vídeo sai da lista. Toque no texto para ver inteiro.</p>
         <div class="legList" id="legList"></div>
         <div class="status" id="legStatus"></div>
-      </section>
-
-      <section class="sec" id="cfgSec" hidden>
-        <h2>Ajustes do web app</h2>
-        <p class="hint">Fora do app do Claude, o estúdio usa a IA pelo proxy na Vercel: a chave da Anthropic fica no servidor e aqui vai só o código de acesso.</p>
-        <label class="f">Código de acesso<input type="password" id="apiCode" autocomplete="off" spellcheck="false"></label>
-        <label class="f">Endereço do proxy<input type="url" id="apiProxy" spellcheck="false" value="https://estudio-de-cards.vercel.app/api/claude"></label>
+    </section>
+    <section class="drView" data-v="cfg" id="cfgSec" hidden>
+        <p class="hint">Tudo aqui fica salvo neste aparelho, mesmo fechando o app. Salva sozinho quando você muda um campo.</p>
+        <label class="f">Chave da API (Anthropic ou OpenAI)<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-… ou sk-proj-…"></label>
         <details>
-          <summary>Sem proxy: usar chave da API direto (Anthropic ou OpenAI)</summary>
-          <p class="hint">Só se o proxy estiver fora do ar. A chave fica guardada neste aparelho.</p>
-          <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-… ou sk-proj-…"></label>
+          <summary>Proxy na Vercel (opcional)</summary>
+          <p class="hint">Com o proxy, a chave fica no servidor e aqui vai só o código de acesso. Se o código estiver preenchido, ele tem prioridade sobre a chave.</p>
+          <label class="f">Código de acesso<input type="password" id="apiCode" autocomplete="off" spellcheck="false"></label>
+          <label class="f">Endereço do proxy<input type="url" id="apiProxy" spellcheck="false" value="https://estudio-de-cards.vercel.app/api/claude"></label>
         </details>
         <div class="row">
           <label class="f">Modelo principal<input type="text" id="apiModel" spellcheck="false" value="claude-sonnet-5-5"></label>
@@ -261,9 +314,13 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
             <li>Computador: no Chrome ou Edge, clique no ícone de instalar na barra de endereço.</li>
           </ul>
         </details>
-      </section>
-    </div>
-  </div>
+    </section>
+    <section class="drView" data-v="conta" hidden>
+      <p class="hint">Entrou como <b id="contaMail2"></b>. O login automático dura 30 dias neste aparelho.</p>
+      <button class="btn" id="logoutBtn" type="button">Sair</button>
+      <p class="hint">Sair só tranca o app. Seus vídeos, legendas e configurações continuam salvos para quando você entrar de novo.</p>
+    </section>
+  </aside>
 </div>
 
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
@@ -292,7 +349,7 @@ const vid=document.getElementById('src');
 const $=id=>document.getElementById(id);
 const DEFAULT_AV='data:image/jpeg;base64,__AVATAR__';
 const avatar=new Image(); avatar.src=DEFAULT_AV; let avatarData=null;
-const state={fmt:'natural',align:'left',zoom:1,pos:.5,size:60,scene:null,text:null,hasVideo:false,exporting:false,analyzing:false,paused:false,blob:null,ext:'mp4',mode:'video',mapFrame:null};
+const state={fmt:'natural',align:'left',zoom:1,pos:.5,size:60,scene:null,text:null,hasVideo:false,exporting:false,analyzing:false,paused:false,blob:null,ext:'mp4',mode:null,mapFrame:null};
 
 /* ---------- padrão salvo ---------- */
 function loadDefaults(){
@@ -310,7 +367,7 @@ $('saveDef').onclick=()=>{
   catch(e){$('defStatus').textContent='Este navegador não deixou salvar. O padrão vale só enquanto a página estiver aberta.';}
 };
 function setSeg(kind,val){
-  if(kind==='al')state.align=val; if(kind==='fmt')state.fmt=val; if(kind==='mode'){state.mode=val;drawMap();}
+  if(kind==='al')state.align=val; if(kind==='fmt')state.fmt=val; if(kind==='mode'){val=state.mode===val?null:val;state.mode=val;$('map').parentNode.classList.toggle('editing',!!val);drawMap();}
   document.querySelectorAll(`[data-${kind}]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset[kind]===val));
 }
 document.querySelectorAll('[data-fmt]').forEach(b=>b.onclick=()=>setSeg('fmt',b.dataset.fmt));
@@ -486,13 +543,13 @@ function drawMap(){
   if(drag){mctx.save();mctx.fillStyle=state.mode==='video'?'rgba(111,208,140,.25)':'rgba(201,169,110,.25)';mctx.fillRect(Math.min(drag.x0,drag.x1),Math.min(drag.y0,drag.y1),Math.abs(drag.x1-drag.x0),Math.abs(drag.y1-drag.y0));mctx.restore();}
 }
 function mapPt(e){const b=map.getBoundingClientRect();return {x:(e.clientX-b.left)*map.width/b.width,y:(e.clientY-b.top)*map.height/b.height};}
-map.addEventListener('pointerdown',e=>{if(!state.mapFrame)return;map.setPointerCapture(e.pointerId);const p=mapPt(e);drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y};drawMap();});
+map.addEventListener('pointerdown',e=>{if(!state.mapFrame||!state.mode)return;map.setPointerCapture(e.pointerId);const p=mapPt(e);drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y};drawMap();});
 map.addEventListener('pointermove',e=>{if(!drag)return;const p=mapPt(e);drag.x1=p.x;drag.y1=p.y;drawMap();});
 map.addEventListener('pointerup',()=>{
   if(!drag)return;const s=map.width/vid.videoWidth;
   const r={x:Math.min(drag.x0,drag.x1)/s,y:Math.min(drag.y0,drag.y1)/s,w:Math.abs(drag.x1-drag.x0)/s,h:Math.abs(drag.y1-drag.y0)/s};
   drag=null;
-  if(r.w>12&&r.h>12){if(state.mode==='video')state.scene=clampRect(r);else{state.text=clampRect(r);readText();}}
+  if(r.w>12&&r.h>12){if(state.mode==='video')state.scene=clampRect(r);else{state.text=clampRect(r);readText();}setSeg('mode',state.mode);}
   drawMap();
 });
 map.addEventListener('pointercancel',()=>{drag=null;drawMap();});
@@ -991,19 +1048,20 @@ async function saveOut(o){
 /* ---------- ajustes do web app ---------- */
 function refreshCfgUI(){
   if(IN_VIEWER)return;
-  $('cfgSec').hidden=false;
   const c=iaCfg();$('apiKey').value=c.key||'';$('apiCode').value=c.code||'';$('apiProxy').value=c.proxy||PROXY_URL;
   if(c.model)$('apiModel').value=c.model;if(c.quick)$('apiQuick').value=c.quick;
   $('aiBanner').hidden=viaProxy(c)||!!c.key;
 }
 function cfgFromUI(){return {code:$('apiCode').value.trim(),proxy:$('apiProxy').value.trim(),key:$('apiKey').value.trim(),
   model:$('apiModel').value.trim()||'claude-sonnet-5-5',quick:$('apiQuick').value.trim()||'claude-haiku-5-5'};}
-$('saveCfg').onclick=()=>{
+function saveCfg(){
   const c=cfgFromUI();
-  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent=viaProxy(c)?'Código salvo. A IA vai pelo proxy.':c.key?'Chave salva neste aparelho.':'Ajustes salvos, mas sem código nem chave a IA fica desligada.';}
+  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent=viaProxy(c)?'Salvo. A IA vai pelo proxy.':c.key?'Chave salva neste aparelho.':'Salvo, mas sem chave a IA fica desligada.';}
   catch(e){$('cfgStatus').className='status warn';$('cfgStatus').textContent='Este navegador não deixou salvar.';}
   sample=null;sampleOk=true;refreshCfgUI();
-};
+}
+$('saveCfg').onclick=saveCfg;
+['apiKey','apiCode','apiProxy','apiModel','apiQuick'].forEach(id=>$(id).addEventListener('change',saveCfg));
 $('clearCfg').onclick=()=>{try{localStorage.removeItem(CFG_KEY);}catch(e){}$('apiKey').value='';$('apiCode').value='';sample=null;sampleOk=true;$('cfgStatus').className='status';$('cfgStatus').textContent='Código e chave apagados deste aparelho.';refreshCfgUI();};
 $('testCfg').onclick=async()=>{
   const st=$('cfgStatus');const c=cfgFromUI();
@@ -1017,6 +1075,78 @@ $('testCfg').onclick=async()=>{
 if(!IN_VIEWER&&'serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
   window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
 }
+
+/* ---------- menu lateral (⋮) ---------- */
+const VIEWS={leg:'Legendas geradas',cfg:'Configurações',conta:'Conta'};
+let drawerFrom=null;
+function showView(v){
+  $('drMenu').hidden=!!v;$('drBack').hidden=!v;$('drTitle').textContent=v?VIEWS[v]:'Menu';
+  document.querySelectorAll('#drawer [data-v]').forEach(x=>x.hidden=x.dataset.v!==v);
+  if(v==='leg')renderLegendas();
+  if(v==='conta')$('contaMail2').textContent=(lsGet(ACC_KEY)||{}).email||'';
+}
+function openDrawer(v){drawerFrom=document.activeElement;$('drawer').hidden=false;document.body.style.overflow='hidden';showView(v||null);$('drClose').focus();}
+function closeDrawer(){$('drawer').hidden=true;document.body.style.overflow='';if(drawerFrom&&drawerFrom.focus)drawerFrom.focus();}
+$('menuBtn').onclick=()=>openDrawer();
+$('bannerCfg').onclick=()=>openDrawer('cfg');
+$('drClose').onclick=closeDrawer;
+$('drBack').onclick=()=>showView(null);
+$('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))closeDrawer();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDrawer();});
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
+if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;}
+
+/* ---------- acesso: login neste aparelho, automático por 30 dias ---------- */
+// Não há servidor: a senha vira um hash PBKDF2 guardado só neste aparelho e tranca o app para quem pegar o celular.
+const ACC_KEY='estudioCards.conta',SES_KEY='estudioCards.sessao',SES_DAYS=30;
+function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+const toB64=u=>btoa(String.fromCharCode(...new Uint8Array(u)));
+async function passHash(pass,salt){
+  const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveBits']);
+  return toB64(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:Uint8Array.from(atob(salt),c=>c.charCodeAt(0)),iterations:210000},k,256));
+}
+function unlock(){
+  $('gate').hidden=true;$('app').hidden=false;
+  const acc=lsGet(ACC_KEY);if(acc)$('contaMail').textContent=acc.email;
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+}
+function showGate(){
+  const acc=lsGet(ACC_KEY),novo=!acc;
+  $('app').hidden=true;$('gate').hidden=false;closeDrawer();
+  $('gateHint').textContent=novo?'Crie o acesso deste aparelho. Depois de entrar, o login fica automático por 30 dias.':'Entre para abrir o estúdio.';
+  $('gPass2Wrap').hidden=!novo;$('gPass2').required=novo;$('gPass').autocomplete=novo?'new-password':'current-password';
+  $('gGo').textContent=novo?'Criar acesso':'Entrar';$('gForgot').hidden=novo;
+  $('gMail').value=acc?acc.email:'';$('gPass').value='';$('gPass2').value='';$('gStatus').textContent='';
+  (acc?$('gPass'):$('gMail')).focus();
+}
+$('gateForm').onsubmit=async e=>{
+  e.preventDefault();
+  const st=$('gStatus'),mail=$('gMail').value.trim().toLowerCase(),pass=$('gPass').value,acc=lsGet(ACC_KEY);
+  const bad=m=>{st.className='status warn';st.textContent=m;};
+  if(!window.crypto||!crypto.subtle)return bad('Este navegador não tem suporte ao login. Abra pelo link https do app.');
+  $('gGo').disabled=true;
+  try{
+    if(!acc){
+      if(pass.length<6)return bad('Use uma senha com pelo menos 6 caracteres.');
+      if(pass!==$('gPass2').value)return bad('As duas senhas não estão iguais.');
+      const salt=toB64(crypto.getRandomValues(new Uint8Array(16)));
+      if(!lsSet(ACC_KEY,{email:mail,salt,hash:await passHash(pass,salt)}))return bad('Este navegador não deixou salvar o acesso.');
+    }else if(mail!==acc.email||await passHash(pass,acc.salt)!==acc.hash)return bad('E-mail ou senha errados.');
+    lsSet(SES_KEY,{until:Date.now()+SES_DAYS*864e5});unlock();
+  }finally{$('gGo').disabled=false;}
+};
+$('gForgot').onclick=()=>{
+  const b=$('gForgot');
+  if(!b.dataset.armed){b.dataset.armed='1';b.textContent='Isso apaga o acesso e tudo o que está salvo neste aparelho (vídeos, legendas e chave). Toque de novo para confirmar.';
+    setTimeout(()=>{delete b.dataset.armed;b.textContent='Esqueci a senha';},6000);return;}
+  [ACC_KEY,SES_KEY,CFG_KEY,KEY].forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+  const done=()=>location.reload();
+  try{const r=indexedDB.deleteDatabase('estudio-cards');r.onsuccess=r.onerror=r.onblocked=done;}catch(e){done();}
+};
+$('logoutBtn').onclick=()=>{try{localStorage.removeItem(SES_KEY);}catch(e){}showGate();};
+if(IN_VIEWER)unlock();
+else{const ses=lsGet(SES_KEY);if(lsGet(ACC_KEY)&&ses&&ses.until>Date.now())unlock();else showGate();}
 
 loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();
 const go=()=>{draw();requestAnimationFrame(loop);};

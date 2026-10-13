@@ -9,6 +9,8 @@ Web app pessoal do Jhonatta (@ojhonatta1) para produzir Reels no formato card. T
   - **Artifact do Claude** (`IN_VIEWER` = `window.claude` existe): IA via `claude.use('sample')`, salvar via `claude.use('downloads')`. Publicar `dist/artifact.html` com capabilities `{"sample":{"images":true},"downloads":true}`.
   - **Web app** (GitHub Pages): IA via proxy na Vercel (`PROXY_URL`, header `x-app-code`; env `ANTHROPIC_API_KEY` e `APP_CODE`) ou, sem proxy, `fetch` direto em `api.anthropic.com` com a chave; config em `localStorage['estudioCards.ia']`; salvar via Web Share (iPhone) ou link de download.
 - Os dois caminhos de IA passam por `getAI()`, que devolve `{json(prompt, {images, signal, modelTier}), limits()}`. Erros sempre como `{code}` (`not_granted`, `rate_limited`, `cancelled`, `upstream_error`, `invalid_json`).
+- Acesso: tela de login no próprio aparelho (`estudioCards.conta` = e-mail + hash PBKDF2, `estudioCards.sessao` = validade de 30 dias). Não há servidor; nunca coloque e-mail ou senha no código (repositório público). No artifact (`IN_VIEWER`) não há login.
+- Menu ⋮ (gaveta lateral): Legendas geradas, Configurações (salvam sozinhas no `change`) e Conta.
 - Persistência: IndexedDB `estudio-cards` com stores `videos` (máx. 3) e `legendas` (máx. 50). Padrão visual em `localStorage['estudioCards.v1']`.
 - Layout do card: canvas 1080×1920; todo o conteúdo fica entre `FEED_TOP=285` e `FEED_BOT=1635` (área 4:5 do Feed).
 
