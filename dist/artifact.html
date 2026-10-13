@@ -239,9 +239,9 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <label class="f">Código de acesso<input type="password" id="apiCode" autocomplete="off" spellcheck="false"></label>
         <label class="f">Endereço do proxy<input type="url" id="apiProxy" spellcheck="false" value="https://estudio-de-cards.vercel.app/api/claude"></label>
         <details>
-          <summary>Sem proxy: usar chave da API direto</summary>
+          <summary>Sem proxy: usar chave da API direto (Anthropic ou OpenAI)</summary>
           <p class="hint">Só se o proxy estiver fora do ar. A chave fica guardada neste aparelho.</p>
-          <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+          <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-… ou sk-proj-…"></label>
         </details>
         <div class="row">
           <label class="f">Modelo principal<input type="text" id="apiModel" spellcheck="false" value="claude-sonnet-5-5"></label>
@@ -511,7 +511,30 @@ function parseLoose(t){
   throw {code:'invalid_json'};
 }
 function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(b);});}
+// chave da OpenAI (sk-proj-…/sk-…): mesma interface, outra API
+const isOpenAI=c=>!viaProxy(c)&&/^sk-(?!ant-)/.test(c.key||'');
+function openaiModel(c,quick){const m=quick?c.quick:c.model;return m&&!/^claude-/.test(m)?m:(quick?'gpt-4.1-mini':'gpt-4.1');}
+function openaiAI(cfg){
+  const json=async(prompt,o={})=>{
+    const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
+    const content=[];
+    for(const b of imgs.slice(0,7))content.push({type:'image_url',image_url:{url:'data:image/jpeg;base64,'+await blobB64(b)}});
+    content.push({type:'text',text:prompt+'\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.'});
+    let r;
+    try{
+      r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal:o.signal,
+        headers:{'content-type':'application/json','authorization':'Bearer '+cfg.key},
+        body:JSON.stringify({model:openaiModel(cfg,o.modelTier==='quick'),max_completion_tokens:1600,response_format:{type:'json_object'},messages:[{role:'user',content}]})});
+    }catch(e){throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error'};}
+    if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||'';}catch(e){}
+      throw {code:r.status===401||r.status===403?'not_granted':r.status===429?'rate_limited':'upstream_error',status:r.status,message:msg};}
+    const d=await r.json();
+    return parseLoose(d.choices?.[0]?.message?.content||'');
+  };
+  return {json,limits:async()=>({maxPromptBytes:262144,images:{maxCount:7,maxInputBytes:5e6,mediaTypes:['image/jpeg']}})};
+}
 function directAI(cfg){
+  if(isOpenAI(cfg))return openaiAI(cfg);
   const json=async(prompt,o={})=>{
     const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
     const content=[];
