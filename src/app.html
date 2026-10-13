@@ -117,7 +117,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <h1>Estúdio de Cards <span>· @ojhonatta1</span></h1>
     <p class="sub">Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card com o seu perfil em 1080×1920.</p>
   </header>
-  <div class="banner" id="aiBanner" hidden><span>A IA está desligada neste aparelho. Coloque sua chave da API para ler frases, criar ideias e escrever legendas.</span><a href="#cfgSec">Abrir Ajustes</a></div>
+  <div class="banner" id="aiBanner" hidden><span>A IA está desligada neste aparelho. Coloque o código de acesso em Ajustes para ler frases, criar ideias e escrever legendas.</span><a href="#cfgSec">Abrir Ajustes</a></div>
 
   <div class="grid">
     <div class="stage">
@@ -235,16 +235,22 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 
       <section class="sec" id="cfgSec" hidden>
         <h2>Ajustes do web app</h2>
-        <p class="hint">Fora do app do Claude, o estúdio usa a sua chave da API da Anthropic para ler frases, criar ideias e escrever legendas. A chave fica guardada só neste aparelho.</p>
-        <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+        <p class="hint">Fora do app do Claude, o estúdio usa a IA pelo proxy na Vercel: a chave da Anthropic fica no servidor e aqui vai só o código de acesso.</p>
+        <label class="f">Código de acesso<input type="password" id="apiCode" autocomplete="off" spellcheck="false"></label>
+        <label class="f">Endereço do proxy<input type="url" id="apiProxy" spellcheck="false" value="https://estudio-de-cards.vercel.app/api/claude"></label>
+        <details>
+          <summary>Sem proxy: usar chave da API direto</summary>
+          <p class="hint">Só se o proxy estiver fora do ar. A chave fica guardada neste aparelho.</p>
+          <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+        </details>
         <div class="row">
           <label class="f">Modelo principal<input type="text" id="apiModel" spellcheck="false" value="claude-sonnet-5-5"></label>
           <label class="f">Modelo rápido<input type="text" id="apiQuick" spellcheck="false" value="claude-haiku-5-5"></label>
         </div>
         <div class="file">
-          <button class="btn gold" id="saveCfg" type="button">Salvar chave</button>
+          <button class="btn gold" id="saveCfg" type="button">Salvar</button>
           <button class="btn" id="testCfg" type="button">Testar conexão</button>
-          <button class="btn" id="clearCfg" type="button">Apagar chave</button>
+          <button class="btn" id="clearCfg" type="button">Apagar</button>
         </div>
         <div class="status" id="cfgStatus"></div>
         <details>
@@ -491,9 +497,11 @@ map.addEventListener('pointerup',()=>{
 });
 map.addEventListener('pointercancel',()=>{drag=null;drawMap();});
 
-/* ---------- IA: Claude dentro do app (artifact) ou API direta (web app) ---------- */
+/* ---------- IA: Claude dentro do app (artifact), proxy na Vercel ou API direta (web app) ---------- */
 const IN_VIEWER=!!(window.claude&&window.claude.use);
 const CFG_KEY='estudioCards.ia';
+const PROXY_URL='https://estudio-de-cards.vercel.app/api/claude';
+const viaProxy=c=>!!(c.proxy&&c.code);
 function iaCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')||{};}catch(e){return {};}}
 function parseLoose(t){
   t=String(t||'').trim();try{return JSON.parse(t);}catch(e){}
@@ -511,8 +519,9 @@ function directAI(cfg){
     content.push({type:'text',text:prompt+'\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.'});
     let r;
     try{
-      r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:o.signal,
-        headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      r=await fetch(viaProxy(cfg)?cfg.proxy:'https://api.anthropic.com/v1/messages',{method:'POST',signal:o.signal,
+        headers:viaProxy(cfg)?{'content-type':'application/json','x-app-code':cfg.code}
+          :{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
         body:JSON.stringify({model:o.modelTier==='quick'?(cfg.quick||'claude-haiku-5-5'):(cfg.model||'claude-sonnet-5-5'),max_tokens:1600,messages:[{role:'user',content}]})});
     }catch(e){throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error'};}
     if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||'';}catch(e){}
@@ -524,9 +533,9 @@ function directAI(cfg){
 }
 async function getAI(){
   if(IN_VIEWER){try{return await window.claude.use('sample');}catch(e){return null;}}
-  const cfg=iaCfg();return cfg.key?directAI(cfg):null;
+  const cfg=iaCfg();return viaProxy(cfg)||cfg.key?directAI(cfg):null;
 }
-const OFF_HINT=IN_VIEWER?'':' Coloque sua chave da API em Ajustes.';
+const OFF_HINT=IN_VIEWER?'':' Coloque o código de acesso em Ajustes.';
 
 /* ---------- leitura da frase com o Claude ---------- */
 let sample=null,sampleOk=true,readCtl=null;
@@ -555,7 +564,7 @@ async function readText(){
   }catch(e){
     const code=e&&e.code;
     if(code==='cancelled'){}
-    else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)){sampleOk=false;os.className='status warn';os.textContent=IN_VIEWER?'A leitura automática não foi liberada. Digite a frase.':'A chave da API foi recusada. Confira em Ajustes.';}
+    else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)){sampleOk=false;os.className='status warn';os.textContent=IN_VIEWER?'A leitura automática não foi liberada. Digite a frase.':'A IA recusou o acesso. Confira o código em Ajustes.';}
     else if(code==='rate_limited'){os.className='status warn';os.textContent='Muitas leituras seguidas. Espere um pouco e toque em Ler texto do vídeo.';}
     else{os.className='status warn';os.textContent='Não consegui ler agora. Toque em Ler texto do vídeo para tentar de novo.';}
   }finally{$('readBtn').disabled=!state.hasVideo;}
@@ -769,7 +778,7 @@ async function genCaption(job){
     job.caption=leg+(tags.length?'\n\n'+tags.join(' '):'');job.capState='ok';
   }catch(e){
     const c=e&&e.code;job.capState='err';
-    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(c)){sampleOk=false;job.capMsg=IN_VIEWER?'A legenda automática não foi liberada. Escreva a sua no campo acima.':'A chave da API foi recusada. Confira em Ajustes.';}
+    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(c)){sampleOk=false;job.capMsg=IN_VIEWER?'A legenda automática não foi liberada. Escreva a sua no campo acima.':'A IA recusou o acesso. Confira o código em Ajustes.';}
     else if(c==='rate_limited')job.capMsg='Muitos pedidos seguidos. Espere um pouco e toque em Gerar outra legenda.';
     else job.capMsg='Não consegui gerar a legenda agora. Toque em Gerar outra legenda.';
   }finally{capRunning--;refreshJob(job);}
@@ -922,22 +931,25 @@ async function saveOut(o){
 function refreshCfgUI(){
   if(IN_VIEWER)return;
   $('cfgSec').hidden=false;
-  const c=iaCfg();$('apiKey').value=c.key||'';if(c.model)$('apiModel').value=c.model;if(c.quick)$('apiQuick').value=c.quick;
-  $('aiBanner').hidden=!!c.key;
+  const c=iaCfg();$('apiKey').value=c.key||'';$('apiCode').value=c.code||'';$('apiProxy').value=c.proxy||PROXY_URL;
+  if(c.model)$('apiModel').value=c.model;if(c.quick)$('apiQuick').value=c.quick;
+  $('aiBanner').hidden=viaProxy(c)||!!c.key;
 }
+function cfgFromUI(){return {code:$('apiCode').value.trim(),proxy:$('apiProxy').value.trim(),key:$('apiKey').value.trim(),
+  model:$('apiModel').value.trim()||'claude-sonnet-5-5',quick:$('apiQuick').value.trim()||'claude-haiku-5-5'};}
 $('saveCfg').onclick=()=>{
-  const c={key:$('apiKey').value.trim(),model:$('apiModel').value.trim()||'claude-sonnet-5-5',quick:$('apiQuick').value.trim()||'claude-haiku-5-5'};
-  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent=c.key?'Chave salva neste aparelho.':'Chave removida.';}
+  const c=cfgFromUI();
+  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent=viaProxy(c)?'Código salvo. A IA vai pelo proxy.':c.key?'Chave salva neste aparelho.':'Ajustes salvos, mas sem código nem chave a IA fica desligada.';}
   catch(e){$('cfgStatus').className='status warn';$('cfgStatus').textContent='Este navegador não deixou salvar.';}
   sample=null;sampleOk=true;refreshCfgUI();
 };
-$('clearCfg').onclick=()=>{try{localStorage.removeItem(CFG_KEY);}catch(e){}$('apiKey').value='';sample=null;sampleOk=true;$('cfgStatus').className='status';$('cfgStatus').textContent='Chave apagada deste aparelho.';refreshCfgUI();};
+$('clearCfg').onclick=()=>{try{localStorage.removeItem(CFG_KEY);}catch(e){}$('apiKey').value='';$('apiCode').value='';sample=null;sampleOk=true;$('cfgStatus').className='status';$('cfgStatus').textContent='Código e chave apagados deste aparelho.';refreshCfgUI();};
 $('testCfg').onclick=async()=>{
-  const st=$('cfgStatus');const c={key:$('apiKey').value.trim(),model:$('apiModel').value.trim(),quick:$('apiQuick').value.trim()};
-  if(!c.key){st.className='status warn';st.textContent='Cole a chave primeiro.';return;}
+  const st=$('cfgStatus');const c=cfgFromUI();
+  if(!viaProxy(c)&&!c.key){st.className='status warn';st.textContent='Coloque o código de acesso primeiro.';return;}
   st.className='status';st.textContent='Testando…';
   try{const ai=directAI(c);const out=await ai.json('Responda só com {"ok":true}.',{});st.className='status ok';st.textContent=out&&out.ok?'Conexão funcionando.':'A API respondeu, mas fora do formato. Pode usar normalmente.';}
-  catch(e){st.className='status warn';st.textContent=e.code==='not_granted'?'Chave recusada. Confira se copiou inteira.':e.code==='rate_limited'?'Limite atingido. Tente daqui a pouco.':'Não conectou'+(e.status?' (erro '+e.status+')':'')+(e.message?': '+e.message:'.');}
+  catch(e){st.className='status warn';st.textContent=e.code==='not_granted'?(viaProxy(c)?'Código recusado pelo proxy. Confira o APP_CODE na Vercel.':'Chave recusada. Confira se copiou inteira.'):e.code==='rate_limited'?'Limite atingido. Tente daqui a pouco.':'Não conectou'+(e.status?' (erro '+e.status+')':'')+(e.message?': '+e.message:'.');}
 };
 
 /* ---------- web app instalável ---------- */

@@ -21,10 +21,17 @@ O app fica publicado no GitHub Pages deste repositório.
 ## IA
 
 - **Dentro do app do Claude** (versão artifact), usa o Claude da própria conta, sem chave.
-- **No web app instalado**, usa a API da Anthropic. Abra **Ajustes do web app** no fim da página e cole sua chave (`sk-ant-…`). A chave fica só no `localStorage` do aparelho e vai direto para `api.anthropic.com`.
+- **No web app instalado**, usa o proxy na Vercel (`api/claude.js`). A chave da Anthropic fica só na Vercel; no app você digita apenas o **código de acesso** em **Ajustes do web app**.
+- Sem proxy, ainda dá para colar uma chave (`sk-ant-…`) direto em Ajustes ("Sem proxy"). Ela fica no `localStorage` do aparelho.
 - Modelos padrão: `claude-sonnet-5-5` (ideias e legendas) e `claude-haiku-5-5` (leitura da frase). Dá para trocar em Ajustes.
 
-> Não compartilhe o celular desbloqueado com o app aberto em Ajustes: a chave aparece lá. Para uso em equipe, o próximo passo é um proxy (ex.: função na Vercel) que guarda a chave no servidor.
+### Proxy na Vercel
+
+1. vercel.com → Add New → Project → importe `ljhonatta/estudio-de-cards` (sem build, framework "Other").
+2. Settings → Environment Variables: `ANTHROPIC_API_KEY` (sua chave) e `APP_CODE` (um código que só você sabe).
+3. Deploy. O endereço fica `https://estudio-de-cards.vercel.app/api/claude` (se a Vercel der outro nome, troque em Ajustes).
+
+O proxy só aceita pedidos do GitHub Pages e do localhost, com o código certo, e limita a resposta a 1600 tokens.
 
 ## Estrutura
 
@@ -32,6 +39,7 @@ O app fica publicado no GitHub Pages deste repositório.
 src/app.html          página (fonte); __AVATAR__ é trocado pela foto
 src/avatar.jpg        foto padrão do card
 src/sw.template.js    service worker (offline + atualização)
+api/claude.js         proxy da IA (função da Vercel)
 build.py              gera index.html, sw.js e dist/artifact.html
 index.html            web app publicado (gerado)
 sw.js                 service worker publicado (gerado)
