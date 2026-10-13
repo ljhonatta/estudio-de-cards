@@ -1,0 +1,953 @@
+<title>Estúdio de Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&family=Manrope:wght@400;500;700&family=Sora:wght@600;700&display=swap">
+<style>
+/* Layout: estúdio de edição — prévia 9:16 fixa à esquerda (topo no celular), etapas numeradas à direita. Visual único escuro: preto, marfim e o dourado da marca. */
+:root{
+  --bg:#0b0b0c; --panel:#141416; --field:#0e0e10; --line:#26262a; --fg:#f2efe8; --muted:#9a968d;
+  --gold:#c9a96e; --gold-ink:#1a1408; --green:#6fd08c; --ok:#7fbf8a; --warn:#e0b25c;
+  --display:"Sora","Montserrat",system-ui,sans-serif;
+  --body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 48px}
+header.top{margin-bottom:18px}
+h1{font-family:var(--display);font-size:22px;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 span{color:var(--gold)}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.stage{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:10px;align-items:center}
+@media (max-width:760px){.stage{position:static}}
+.phone{width:100%;max-width:300px;aspect-ratio:9/16;border-radius:22px;overflow:hidden;border:1px solid var(--line);background:#000;position:relative}
+.phone canvas{width:100%;height:100%;display:block}
+.drop{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 18px 34px;gap:6px;text-align:center;pointer-events:none}
+.drop b{font-family:var(--display);font-size:14px}
+.drop small{color:var(--muted);font-size:12px}
+.meta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
+.panel{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.sec h2{font-family:var(--display);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+input[type=text],textarea{width:100%;background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:15px}
+textarea{min-height:96px;resize:vertical;font-family:"Montserrat",var(--body);font-weight:600}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1 1 140px;min-width:0}
+.file{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.btn{appearance:none;border:1px solid var(--line);background:#1b1b1e;color:var(--fg);border-radius:10px;padding:10px 14px;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+.btn:hover{border-color:#3a3a40}
+.btn.gold{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.btn.gold:hover{filter:brightness(1.06)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.big{width:100%;padding:14px;font-size:16px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;background:transparent;color:var(--muted);border:0;padding:9px 6px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed=true]{background:#24221d;color:var(--gold)}
+.seg button.v[aria-pressed=true]{background:#18241c;color:var(--green)}
+.range{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.range .lab{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.check{display:flex;align-items:center;gap:8px;font-size:14px}
+.check input{accent-color:var(--gold);width:18px;height:18px}
+.map{position:relative;width:100%;max-width:420px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#000;touch-action:none}
+.map canvas{display:block;width:100%;height:auto;cursor:crosshair}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.chips{display:flex;flex-direction:column;gap:10px}
+.pillar{display:flex;flex-direction:column;gap:6px}
+.pillar strong{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.pillar .list{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--field);border:1px solid var(--line);color:var(--fg);border-radius:999px;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer;text-align:left}
+.chip:hover{border-color:var(--gold)}
+details summary{cursor:pointer;font-weight:700;font-size:14px}
+.sugg{display:flex;flex-direction:column;gap:8px}
+.sugList{display:flex;flex-direction:column;gap:8px}
+.sug{appearance:none;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--fg);font:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.sug:hover,.sug[aria-pressed=true]{border-color:var(--gold)}
+.sug b{font-family:"Montserrat",var(--body);font-weight:700;font-size:14px;line-height:1.35;white-space:pre-line}
+.sug span{font-size:12px;color:var(--muted)}
+.ctx{margin:0;font-size:13px;color:var(--fg);background:var(--field);border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+.ctx b{color:var(--gold);font-weight:700}
+.sug em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.prog{height:6px;background:var(--field);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.prog i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s linear}
+.status{font-size:13px;color:var(--muted);min-height:1.2em}
+.status.ok{color:var(--ok)} .status.warn{color:var(--warn)}
+.outs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.out{display:flex;flex-direction:column;gap:6px;min-width:0}
+.out video{width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#000;display:block}
+.out small{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.out{appearance:none;background:transparent;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.out video{pointer-events:none}
+.out .tag{font-size:11.5px;font-weight:700;color:var(--gold)}
+.out .tag.wait{color:var(--muted)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px))}
+@media (min-width:761px){.sheet{align-items:center}}
+.sheet .box{width:100%;max-width:520px;max-height:calc(100% - env(safe-area-inset-top,0px) - 12px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.sheet .head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sheet .head h3{font-family:var(--display);font-size:15px;margin:0}
+.sheet video{width:100%;max-height:44vh;object-fit:contain;background:#000;border-radius:12px;border:1px solid var(--line)}
+.sheet textarea{min-height:220px;font-family:var(--body);font-weight:500;font-size:14.5px;line-height:1.55}
+.capbar{display:flex;gap:8px;flex-wrap:wrap}
+.capbar .btn{flex:1 1 120px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.capbar svg{width:18px;height:18px}
+.hint{font-size:12.5px;color:var(--muted);margin:0}
+.banner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#1d1a12;border:1px solid #4a3f22;color:var(--fg);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:16px}
+.banner a{color:var(--gold);font-weight:700}
+.legList{display:flex;flex-direction:column;gap:10px}
+.leg{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--field);min-width:0}
+.leg time{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.leg b{font-family:"Montserrat",var(--body);font-size:13.5px;line-height:1.35}
+.leg p{margin:0;font-size:13px;color:var(--muted);white-space:pre-line;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.leg.open p{display:block;-webkit-line-clamp:unset;color:var(--fg)}
+.leg .acts{display:flex;gap:8px;flex-wrap:wrap}
+.leg .acts .btn{padding:7px 12px;font-size:13px}
+.leg .acts .danger{color:#e7a0a0}
+.inst{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+@media (prefers-reduced-motion:reduce){.prog i{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Estúdio de Cards <span>· @ojhonatta1</span></h1>
+    <p class="sub">Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card com o seu perfil em 1080×1920.</p>
+  </header>
+  <div class="banner" id="aiBanner" hidden><span>A IA está desligada neste aparelho. Coloque sua chave da API para ler frases, criar ideias e escrever legendas.</span><a href="#cfgSec">Abrir Ajustes</a></div>
+
+  <div class="grid">
+    <div class="stage">
+      <div class="phone">
+        <canvas id="cv" width="1080" height="1920" aria-label="Prévia do card"></canvas>
+        <div class="drop" id="dropHint"><b>Escolha um vídeo para começar</b><small>A prévia mostra o card com uma frase de exemplo</small></div>
+      </div>
+      <div class="meta" id="meta">1080 × 1920 · 9:16</div>
+      <button class="btn" id="playBtn" type="button" disabled>Pausar prévia</button>
+      <label class="check" style="font-size:13px"><input type="checkbox" id="guide" checked> Mostrar corte do Feed (não sai no vídeo)</label>
+    </div>
+
+    <div class="panel">
+      <section class="sec">
+        <h2>1 · Vídeo de referência</h2>
+        <div class="file">
+          <input type="file" id="vidIn" accept="video/*" hidden>
+          <button class="btn gold" id="pickVid" type="button">Escolher vídeo</button>
+          <span class="hint" id="vidName">Nenhum vídeo carregado</span>
+        </div>
+        <div class="status" id="anStatus"></div>
+        <div id="mapBox" hidden>
+          <div class="map"><canvas id="map" aria-label="Áreas detectadas no vídeo"></canvas></div>
+          <div class="legend" style="margin-top:8px"><span><i style="background:var(--green)"></i>Cena que vai para o card</span><span><i style="background:var(--gold)"></i>Texto original</span></div>
+          <div class="hint" style="margin:12px 0 6px">Errou a área? Escolha qual corrigir e arraste o dedo sobre a imagem.</div>
+          <div class="seg" role="group" aria-label="Área para ajustar">
+            <button type="button" class="v" data-mode="video" aria-pressed="true">Ajustar cena</button>
+            <button type="button" data-mode="text" aria-pressed="false">Ajustar texto</button>
+          </div>
+          <button class="btn" id="reAnalyze" type="button" style="margin-top:10px">Detectar de novo</button>
+        </div>
+        <div>
+          <div class="hint" style="margin-bottom:6px">Formato da cena no card</div>
+          <div class="seg" role="group" aria-label="Formato da cena">
+            <button type="button" data-fmt="natural" aria-pressed="true">Natural</button>
+            <button type="button" data-fmt="square" aria-pressed="false">Quadrado</button>
+            <button type="button" data-fmt="tall" aria-pressed="false">Alto 4:5</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="range"><div class="lab"><span>Zoom</span><span id="zoomV">100%</span></div><input type="range" id="zoom" min="100" max="200" value="100"></div>
+          <div class="range"><div class="lab"><span>Posição vertical</span><span id="posV">centro</span></div><input type="range" id="pos" min="0" max="100" value="50"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="keepAudio" checked> Manter o áudio original no arquivo</label>
+      </section>
+
+      <section class="sec">
+        <h2>2 · Frase</h2>
+        <div class="file">
+          <button class="btn" id="readBtn" type="button" disabled>Ler texto do vídeo</button>
+          <span class="status" id="ocrStatus">A frase é lida automaticamente quando o vídeo carrega.</span>
+        </div>
+        <label class="f">Texto do card (edite à vontade)
+          <textarea id="txt">Quando você passou por várias dificuldades mas não desistiu, e enfim tudo começa a dar certo</textarea>
+        </label>
+        <label class="f">Do que o vídeo fala? (opcional, melhora as ideias e a legenda)
+          <textarea id="ctxIn" style="min-height:64px;font-family:var(--body);font-weight:500;font-size:14px" placeholder="Ex.: o cara fala que quem não aguenta a solidão do processo nunca vai construir nada grande. Pode colar a legenda original do post."></textarea>
+        </label>
+        <div class="sugg" id="sugg" hidden>
+          <div class="hint" id="sugTitle">Sugestões para mexer mais com o público (toque para usar)</div>
+          <p class="ctx" id="sugCtx" hidden></p>
+          <div class="sugList" id="sugList"></div>
+          <div class="status" id="sugStatus"></div>
+          <button class="btn" id="moreSug" type="button" hidden>Gerar outras 3</button>
+        </div>
+        <div class="row">
+          <div class="range"><div class="lab"><span>Tamanho da letra</span><span id="sizeV">60</span></div><input type="range" id="size" min="40" max="90" value="60"></div>
+          <div>
+            <div class="hint" style="margin-bottom:6px">Alinhamento</div>
+            <div class="seg" role="group" aria-label="Alinhamento">
+              <button type="button" data-al="left" aria-pressed="true">Esquerda</button>
+              <button type="button" data-al="center" aria-pressed="false">Centro</button>
+            </div>
+          </div>
+        </div>
+        <details>
+          <summary>Banco de frases (toque para usar)</summary>
+          <div class="chips" id="bank" style="margin-top:12px"></div>
+        </details>
+      </section>
+
+      <section class="sec">
+        <h2>3 · Seu padrão</h2>
+        <div class="row">
+          <label class="f">Nome<input type="text" id="name" value="Jhonatta • VPR MKT"></label>
+          <label class="f">Arroba<input type="text" id="handle" value="@ojhonatta1"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="badge" checked> Mostrar selo ao lado do nome</label>
+        <div class="file">
+          <input type="file" id="avIn" accept="image/*" hidden>
+          <button class="btn" id="pickAv" type="button">Trocar foto</button>
+          <button class="btn gold" id="saveDef" type="button">Salvar como padrão</button>
+        </div>
+        <p class="hint" id="defStatus">Salva nome, arroba, foto, selo, tamanho da letra, alinhamento e formato neste aparelho.</p>
+      </section>
+
+      <section class="sec">
+        <h2>4 · Exportar</h2>
+        <button class="btn gold big" id="exportBtn" type="button" disabled>Gerar vídeo final</button>
+        <div class="prog" aria-hidden="true"><i id="bar"></i></div>
+        <div class="status" id="status">A exportação roda em tempo real: um vídeo de 15 s leva cerca de 15 s.</div>
+        <div class="result" id="result" hidden>
+          <div class="hint" style="margin-bottom:8px">Últimos 3 vídeos, salvos neste aparelho. Toque num vídeo para abrir a legenda e baixar. Quando entra um novo, o mais antigo sai sozinho.</div>
+          <div class="outs" id="outs"></div>
+          <p class="hint" style="margin-top:8px">No iPhone, toque em Baixar e escolha "Salvar Vídeo" na folha de compartilhamento. Depois, no Instagram, adicione o áudio em alta.</p>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2>5 · Legendas salvas</h2>
+        <p class="hint">As últimas 50 legendas ficam guardadas aqui, mesmo depois que o vídeo sai da lista. Toque no texto para ver inteiro.</p>
+        <div class="legList" id="legList"></div>
+        <div class="status" id="legStatus"></div>
+      </section>
+
+      <section class="sec" id="cfgSec" hidden>
+        <h2>Ajustes do web app</h2>
+        <p class="hint">Fora do app do Claude, o estúdio usa a sua chave da API da Anthropic para ler frases, criar ideias e escrever legendas. A chave fica guardada só neste aparelho.</p>
+        <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></label>
+        <div class="row">
+          <label class="f">Modelo principal<input type="text" id="apiModel" spellcheck="false" value="claude-sonnet-5-5"></label>
+          <label class="f">Modelo rápido<input type="text" id="apiQuick" spellcheck="false" value="claude-haiku-5-5"></label>
+        </div>
+        <div class="file">
+          <button class="btn gold" id="saveCfg" type="button">Salvar chave</button>
+          <button class="btn" id="testCfg" type="button">Testar conexão</button>
+          <button class="btn" id="clearCfg" type="button">Apagar chave</button>
+        </div>
+        <div class="status" id="cfgStatus"></div>
+        <details>
+          <summary>Como instalar no celular e no computador</summary>
+          <ul class="hint inst">
+            <li>iPhone: abra no Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início".</li>
+            <li>Android: abra no Chrome, toque no menu ⋮ e depois em "Instalar app".</li>
+            <li>Computador: no Chrome ou Edge, clique no ícone de instalar na barra de endereço.</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="box">
+    <div class="head"><h3 id="sheetTitle">Vídeo pronto para postar</h3><button class="btn" id="closeSheet" type="button">Fechar</button></div>
+    <video id="sheetVid" controls playsinline></video>
+    <label class="f">Legenda com hashtags (pode editar)
+      <textarea id="capTxt" placeholder="Gerando a legenda…"></textarea>
+    </label>
+    <div class="status" id="capStatus"></div>
+    <div class="capbar">
+      <button class="btn gold" id="copyCap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copiar legenda</button>
+      <button class="btn" id="regenCap" type="button">Gerar outra legenda</button>
+    </div>
+    <button class="btn gold big" id="sheetSave" type="button">Baixar vídeo na galeria</button>
+  </div>
+</div>
+
+<video id="src" playsinline webkit-playsinline muted loop preload="auto" style="position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none"></video>
+
+<script>
+(function(){
+const W=1080,H=1920,PAD=72,KEY='estudioCards.v1',FEED_TOP=285,FEED_BOT=1635;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const vid=document.getElementById('src');
+const $=id=>document.getElementById(id);
+const DEFAULT_AV='data:image/jpeg;base64,__AVATAR__';
+const avatar=new Image(); avatar.src=DEFAULT_AV; let avatarData=null;
+const state={fmt:'natural',align:'left',zoom:1,pos:.5,size:60,scene:null,text:null,hasVideo:false,exporting:false,analyzing:false,paused:false,blob:null,ext:'mp4',mode:'video',mapFrame:null};
+
+/* ---------- padrão salvo ---------- */
+function loadDefaults(){
+  let d=null;try{d=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
+  if(!d)return;
+  if(d.name)$('name').value=d.name; if(d.handle)$('handle').value=d.handle;
+  if(typeof d.badge==='boolean')$('badge').checked=d.badge;
+  if(d.size){state.size=d.size;$('size').value=d.size;$('sizeV').textContent=d.size;}
+  if(d.align)setSeg('al',d.align); if(d.fmt)setSeg('fmt',d.fmt);
+  if(d.avatar){avatarData=d.avatar;avatar.src=d.avatar;}
+}
+$('saveDef').onclick=()=>{
+  const d={name:$('name').value,handle:$('handle').value,badge:$('badge').checked,size:state.size,align:state.align,fmt:state.fmt,avatar:avatarData};
+  try{localStorage.setItem(KEY,JSON.stringify(d));$('defStatus').textContent='Padrão salvo neste aparelho.';}
+  catch(e){$('defStatus').textContent='Este navegador não deixou salvar. O padrão vale só enquanto a página estiver aberta.';}
+};
+function setSeg(kind,val){
+  if(kind==='al')state.align=val; if(kind==='fmt')state.fmt=val; if(kind==='mode'){state.mode=val;drawMap();}
+  document.querySelectorAll(`[data-${kind}]`).forEach(x=>x.setAttribute('aria-pressed',x.dataset[kind]===val));
+}
+document.querySelectorAll('[data-fmt]').forEach(b=>b.onclick=()=>setSeg('fmt',b.dataset.fmt));
+document.querySelectorAll('[data-al]').forEach(b=>b.onclick=()=>setSeg('al',b.dataset.al));
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setSeg('mode',b.dataset.mode));
+
+/* ---------- banco de frases ---------- */
+const BANK={
+ 'Superação':['Quando você passou por várias dificuldades mas não desistiu, e enfim tudo começa a dar certo','Ninguém viu as noites. Todo mundo quer ver o resultado','Eu olhando pra trás e vendo tudo que Deus me fez atravessar','Quando você entende que o atraso era preparação','Aquele dia em que você quase desistiu… e hoje agradece por não ter desistido','Quando a dor do processo vira testemunho','Eles riram do começo. Agora pedem conselho'],
+ 'Dinheiro e status':['Aquela sensação de fazer no dia o que antes você fazia no mês','Quando você para de contar seus planos e começa a mostrar resultado','Eu depois de aprender que dinheiro é consequência de disciplina','Quando o primeiro cliente grande fecha contrato','Eu saindo da zona de conforto pra buscar algo muito maior','Quando você investe em você e o retorno começa a aparecer','Ele ainda acha que é sorte. Eu sei que foi constância'],
+ 'Humor de empreendedor':['Como é administrar um negócio','Empresário às 6h: hoje vai ser leve. Empresário às 9h:','Eu explicando pra família por que trabalho sábado e domingo','Cliente pedindo desconto depois de aprovar o orçamento','Quando o funcionário fala "chefe, tem um probleminha"','Eu respondendo "tá tudo sob controle" com 14 problemas abertos','O empresário quando o PIX cai na conta'],
+ 'Solidão e foco':['"Ficar sozinho é horrível."\nEu sozinho e focado:','Quando você se afasta de todo mundo pra construir algo','Eu nunca estou sozinho, aprendi a desfrutar da presença de Deus no secreto','Fase de silêncio: pouca conversa, muita execução','Quando você troca o rolê pelo projeto','Eles chamam de isolamento. Eu chamo de construção','Quando o foco fica maior que a distração']
+};
+for(const [p,list] of Object.entries(BANK)){
+  const d=document.createElement('div');d.className='pillar';
+  const s=document.createElement('strong');s.textContent=p;d.appendChild(s);
+  const l=document.createElement('div');l.className='list';
+  list.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=t.replace('\n',' ');b.onclick=()=>{$('txt').value=t;};l.appendChild(b);});
+  d.appendChild(l);$('bank').appendChild(d);
+}
+
+/* ---------- desenho do card ---------- */
+function wrap(text,maxW){
+  const lines=[];
+  for(const para of text.split('\n')){
+    const words=para.split(/\s+/).filter(Boolean); let line='';
+    if(!words.length){lines.push('');continue;}
+    for(const w of words){const t=line?line+' '+w:w; if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w;}else line=t;}
+    lines.push(line);
+  }
+  return lines;
+}
+function badge(x,y,r){
+  ctx.save();ctx.translate(x,y);ctx.beginPath();
+  for(let i=0;i<24;i++){const a=i*Math.PI/12;const rr=i%2?r*.86:r;ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}
+  ctx.closePath();ctx.fillStyle='#1d9bf0';ctx.fill();
+  ctx.beginPath();ctx.moveTo(-r*.38,0);ctx.lineTo(-r*.08,r*.3);ctx.lineTo(r*.42,-r*.3);
+  ctx.strokeStyle='#fff';ctx.lineWidth=r*.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();ctx.restore();
+}
+function boxH(){
+  const s=state.scene; const ar=s?s.w/s.h:16/9;
+  if(state.fmt==='square')return 1080; if(state.fmt==='tall')return 1350;
+  return Math.min(1100,Math.round(W/ar));
+}
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  // tudo cabe na área 4:5 do Feed (y 285 a 1635), com folga
+  const AVAIL=FEED_BOT-FEED_TOP-80,headH=120,gap1=48,gap2=48,MINBOX=420;
+  let size=state.size,lh,lines,textH;
+  for(;;){
+    lh=Math.round(size*1.2);ctx.font=`800 ${size}px Montserrat, system-ui, sans-serif`;
+    lines=wrap($('txt').value.trim()||' ',W-PAD*2);textH=lines.length*lh;
+    if(headH+gap1+textH+gap2+MINBOX<=AVAIL||size<=40)break;size-=2;
+  }
+  state.fitSize=size;
+  const bh=Math.max(300,Math.min(boxH(),AVAIL-(headH+gap1+textH+gap2)));
+  const top=Math.round((H-(headH+gap1+textH+gap2+bh))/2);
+  const ax=PAD,ay=top,ar=60;
+  ctx.save();ctx.beginPath();ctx.arc(ax+ar,ay+ar,ar,0,Math.PI*2);ctx.clip();
+  if(avatar.complete&&avatar.naturalWidth){const s=Math.min(avatar.naturalWidth,avatar.naturalHeight);ctx.drawImage(avatar,(avatar.naturalWidth-s)/2,(avatar.naturalHeight-s)/2,s,s,ax,ay,ar*2,ar*2);}
+  else{ctx.fillStyle='#222';ctx.fillRect(ax,ay,ar*2,ar*2);}
+  ctx.restore();
+  const tx=ax+ar*2+30;
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  ctx.font='700 44px Montserrat, system-ui, sans-serif';ctx.fillStyle='#f5f5f5';
+  const nm=$('name').value;ctx.fillText(nm,tx,ay+54);
+  if($('badge').checked)badge(tx+ctx.measureText(nm).width+32,ay+40,20);
+  ctx.font='500 36px Montserrat, system-ui, sans-serif';ctx.fillStyle='#8b8b90';
+  ctx.fillText($('handle').value,tx,ay+104);
+  ctx.font=`800 ${size}px Montserrat, system-ui, sans-serif`;ctx.fillStyle='#fff';
+  ctx.textAlign=state.align==='center'?'center':'left';
+  const x0=state.align==='center'?W/2:PAD;
+  let y=top+headH+gap1+size;
+  for(const l of lines){ctx.fillText(l,x0,y);y+=lh;}
+  const by=top+headH+gap1+textH+gap2;
+  if(state.hasVideo&&state.scene&&vid.readyState>=2){
+    const t=state.scene,z=state.zoom,target=W/bh;
+    let sw=t.w/z,sh=t.h/z; if(sw/sh>target)sw=sh*target; else sh=sw/target;
+    ctx.drawImage(vid,t.x+(t.w-sw)/2,t.y+(t.h-sh)*state.pos,sw,sh,0,by,W,bh);
+  }else{
+    ctx.fillStyle='#141416';ctx.fillRect(0,by,W,bh);
+    ctx.fillStyle='#55555c';ctx.textAlign='center';ctx.font='600 40px Montserrat, system-ui, sans-serif';
+    ctx.fillText(state.analyzing?'analisando o vídeo…':'a cena aparece aqui',W/2,by+bh/2+14);
+  }
+  if(!state.exporting&&$('guide').checked){
+    ctx.save();ctx.strokeStyle='rgba(201,169,110,.9)';ctx.lineWidth=4;ctx.setLineDash([24,16]);
+    [FEED_TOP,FEED_BOT].forEach(y=>{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();});
+    ctx.setLineDash([]);ctx.fillStyle='rgba(201,169,110,.95)';ctx.font='700 30px Montserrat, system-ui, sans-serif';ctx.textAlign='right';
+    ctx.fillText('corte do Feed',W-24,FEED_TOP-14);ctx.restore();
+  }
+}
+function loop(){ if(!state.exporting&&!state.analyzing) draw(); requestAnimationFrame(loop); }
+
+/* ---------- análise: cena por movimento, texto por contraste estático ---------- */
+function seekTo(t){return new Promise(r=>{
+  let done=false;const fin=()=>{if(done)return;done=true;vid.removeEventListener('seeked',fin);setTimeout(r,60);};
+  vid.addEventListener('seeked',fin);setTimeout(fin,2500);
+  const target=Math.max(0,Math.min(t,(vid.duration||1)-0.05));
+  if(Math.abs(vid.currentTime-target)<0.01)fin();else vid.currentTime=target;});}
+function waitEvent(names,ms){return new Promise((res,rej)=>{
+  const evs=names.split(' ');let tm;
+  const ok=()=>{clean();res();},bad=()=>{clean();rej(new Error('erro'));};
+  const clean=()=>{clearTimeout(tm);evs.forEach(n=>vid.removeEventListener(n,ok));vid.removeEventListener('error',bad);};
+  evs.forEach(n=>vid.addEventListener(n,ok));vid.addEventListener('error',bad);
+  tm=setTimeout(()=>{clean();rej(new Error('tempo'));},ms);});}
+function longestRun(arr,th,gap){
+  let best=null,s=-1,lastOn=-1;
+  for(let i=0;i<=arr.length;i++){
+    const on=i<arr.length&&arr[i]>th;
+    if(on){if(s<0)s=i;lastOn=i;}
+    else if(s>=0&&(i-lastOn>gap||i===arr.length)){if(!best||lastOn-s>best[1]-best[0])best=[s,lastOn];s=-1;}
+  }
+  return best;
+}
+async function analyze(){
+  state.analyzing=true;vid.pause();$('anStatus').className='status';$('anStatus').textContent='Analisando o vídeo…';
+  const vw=vid.videoWidth,vh=vid.videoHeight,sw=160,sh=Math.max(1,Math.round(sw*vh/vw)),k=vw/sw;
+  const oc=document.createElement('canvas');oc.width=sw;oc.height=sh;const o=oc.getContext('2d',{willReadFrequently:true});
+  const N=7,frames=[],dur=vid.duration||1;state.shots=[];
+  const shotW=Math.min(560,vw),shotH=Math.round(shotW*vh/vw);
+  for(let i=0;i<N;i++){await seekTo(dur*(0.08+0.84*i/(N-1)));o.drawImage(vid,0,0,sw,sh);
+    {const sc=document.createElement('canvas');sc.dataset.t=vid.currentTime.toFixed(1);sc.width=shotW;sc.height=shotH;sc.getContext('2d').drawImage(vid,0,0,shotW,shotH);state.shots.push(sc);}
+    const d=o.getImageData(0,0,sw,sh).data,g=new Float32Array(sw*sh);for(let p=0;p<sw*sh;p++)g[p]=.3*d[p*4]+.59*d[p*4+1]+.11*d[p*4+2];frames.push(g);}
+  // frame do meio em resolução maior para o mapa e a leitura do texto
+  await seekTo(dur*0.5);
+  const mf=document.createElement('canvas');const ms=Math.min(1,1400/vw);mf.width=Math.round(vw*ms);mf.height=Math.round(vh*ms);
+  mf.getContext('2d').drawImage(vid,0,0,mf.width,mf.height);state.mapFrame=mf;
+  // movimento por pixel
+  const mov=new Uint8Array(sw*sh);
+  for(let p=0;p<sw*sh;p++){let m=0;for(let i=1;i<N;i++){const dd=Math.abs(frames[i][p]-frames[i-1][p]);if(dd>m)m=dd;}mov[p]=m>16?1:0;}
+  const rowS=new Float32Array(sh);for(let y=0;y<sh;y++){let c=0;for(let x=0;x<sw;x++)c+=mov[y*sw+x];rowS[y]=c/sw;}
+  let rr=longestRun(rowS,.06,3),scene=null;
+  if(rr&&(rr[1]-rr[0])>sh*.12){
+    const colS=new Float32Array(sw);for(let x=0;x<sw;x++){let c=0;for(let y=rr[0];y<=rr[1];y++)c+=mov[y*sw+x];colS[x]=c/(rr[1]-rr[0]+1);}
+    let cr=longestRun(colS,.04,4)||[0,sw-1];
+    scene={x:(cr[0]+1)*k,y:(rr[0]+1)*k,w:(cr[1]-cr[0]-1)*k,h:(rr[1]-rr[0]-1)*k};
+  }
+  // conteúdo estático (texto): linhas com contraste fora da cena
+  const mid=frames[Math.floor(N/2)];
+  const rowStd=y=>{let s=0,s2=0;for(let x=0;x<sw;x++){const v=mid[y*sw+x];s+=v;s2+=v*v;}const m=s/sw;return Math.sqrt(Math.max(0,s2/sw-m*m));};
+  const content=new Float32Array(sh);for(let y=0;y<sh;y++)content[y]=rowStd(y);
+  if(!scene){ // sem movimento: usa a maior faixa com conteúdo como cena
+    const cr=longestRun(content,10,2)||[0,sh-1];
+    scene={x:0,y:cr[0]*k,w:vw,h:(cr[1]-cr[0]+1)*k};
+  }
+  const sTop=Math.floor(scene.y/k),sBot=Math.ceil((scene.y+scene.h)/k);
+  const above=[],below=[];
+  for(let y=0;y<sTop-2;y++)if(content[y]>12)above.push(y);
+  for(let y=sBot+2;y<sh;y++)if(content[y]>12)below.push(y);
+  const band=above.length?above:below;let text=null;
+  if(band.length){
+    const y0=band[0],y1=band[band.length-1];let x0=sw,x1=0;
+    for(let y=y0;y<=y1;y++)for(let x=1;x<sw;x++){if(Math.abs(mid[y*sw+x]-mid[y*sw+x-1])>40){if(x<x0)x0=x;if(x>x1)x1=x;}}
+    if(x1<=x0){x0=0;x1=sw-1;}
+    const p=3;text={x:Math.max(0,(x0-p)*k),y:Math.max(0,(y0-p)*k),w:Math.min(vw,(x1-x0+2*p)*k),h:Math.min(vh,(y1-y0+2*p)*k)};
+  }
+  state.scene=clampRect(scene);state.text=text?clampRect(text):null;
+  state.analyzing=false;$('mapBox').hidden=false;drawMap();
+  $('anStatus').className='status ok';
+  $('anStatus').textContent=state.text?'Cena e texto detectados. Confira as áreas abaixo.':'Cena detectada. Não achei texto: marque a área do texto ou escreva a frase.';
+  await seekTo(0);if(!state.paused)vid.play().catch(()=>{});
+}
+function clampRect(r){const vw=vid.videoWidth,vh=vid.videoHeight;const x=Math.max(0,Math.min(r.x,vw-8)),y=Math.max(0,Math.min(r.y,vh-8));return {x,y,w:Math.max(8,Math.min(r.w,vw-x)),h:Math.max(8,Math.min(r.h,vh-y))};}
+
+/* ---------- mapa interativo ---------- */
+const map=$('map'),mctx=map.getContext('2d');let drag=null;
+function drawMap(){
+  const f=state.mapFrame;if(!f)return;
+  map.width=f.width;map.height=f.height;mctx.drawImage(f,0,0);
+  const s=f.width/vid.videoWidth,lw=Math.max(3,f.width/160);
+  const rect=(r,c,on)=>{if(!r)return;mctx.save();mctx.strokeStyle=c;mctx.lineWidth=on?lw*1.6:lw;mctx.setLineDash(on?[]:[lw*3,lw*2]);mctx.strokeRect(r.x*s,r.y*s,r.w*s,r.h*s);mctx.restore();};
+  rect(state.text,'#c9a96e',state.mode==='text');rect(state.scene,'#6fd08c',state.mode==='video');
+  if(drag){mctx.save();mctx.fillStyle=state.mode==='video'?'rgba(111,208,140,.25)':'rgba(201,169,110,.25)';mctx.fillRect(Math.min(drag.x0,drag.x1),Math.min(drag.y0,drag.y1),Math.abs(drag.x1-drag.x0),Math.abs(drag.y1-drag.y0));mctx.restore();}
+}
+function mapPt(e){const b=map.getBoundingClientRect();return {x:(e.clientX-b.left)*map.width/b.width,y:(e.clientY-b.top)*map.height/b.height};}
+map.addEventListener('pointerdown',e=>{if(!state.mapFrame)return;map.setPointerCapture(e.pointerId);const p=mapPt(e);drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y};drawMap();});
+map.addEventListener('pointermove',e=>{if(!drag)return;const p=mapPt(e);drag.x1=p.x;drag.y1=p.y;drawMap();});
+map.addEventListener('pointerup',()=>{
+  if(!drag)return;const s=map.width/vid.videoWidth;
+  const r={x:Math.min(drag.x0,drag.x1)/s,y:Math.min(drag.y0,drag.y1)/s,w:Math.abs(drag.x1-drag.x0)/s,h:Math.abs(drag.y1-drag.y0)/s};
+  drag=null;
+  if(r.w>12&&r.h>12){if(state.mode==='video')state.scene=clampRect(r);else{state.text=clampRect(r);readText();}}
+  drawMap();
+});
+map.addEventListener('pointercancel',()=>{drag=null;drawMap();});
+
+/* ---------- IA: Claude dentro do app (artifact) ou API direta (web app) ---------- */
+const IN_VIEWER=!!(window.claude&&window.claude.use);
+const CFG_KEY='estudioCards.ia';
+function iaCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')||{};}catch(e){return {};}}
+function parseLoose(t){
+  t=String(t||'').trim();try{return JSON.parse(t);}catch(e){}
+  const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1]);}catch(e){}}
+  const a=t.search(/[\[{]/),b=Math.max(t.lastIndexOf('}'),t.lastIndexOf(']'));
+  if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1));}catch(e){}}
+  throw {code:'invalid_json'};
+}
+function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(b);});}
+function directAI(cfg){
+  const json=async(prompt,o={})=>{
+    const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
+    const content=[];
+    for(const b of imgs.slice(0,7))content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:await blobB64(b)}});
+    content.push({type:'text',text:prompt+'\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.'});
+    let r;
+    try{
+      r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:o.signal,
+        headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:o.modelTier==='quick'?(cfg.quick||'claude-haiku-5-5'):(cfg.model||'claude-sonnet-5-5'),max_tokens:1600,messages:[{role:'user',content}]})});
+    }catch(e){throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error'};}
+    if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||'';}catch(e){}
+      throw {code:r.status===401||r.status===403?'not_granted':r.status===429||r.status===529?'rate_limited':'upstream_error',status:r.status,message:msg};}
+    const d=await r.json();
+    return parseLoose((d.content||[]).filter(c=>c.type==='text').map(c=>c.text).join(''));
+  };
+  return {json,limits:async()=>({maxPromptBytes:262144,images:{maxCount:7,maxInputBytes:5e6,mediaTypes:['image/jpeg']}})};
+}
+async function getAI(){
+  if(IN_VIEWER){try{return await window.claude.use('sample');}catch(e){return null;}}
+  const cfg=iaCfg();return cfg.key?directAI(cfg):null;
+}
+const OFF_HINT=IN_VIEWER?'':' Coloque sua chave da API em Ajustes.';
+
+/* ---------- leitura da frase com o Claude ---------- */
+let sample=null,sampleOk=true,readCtl=null;
+async function readText(){
+  const os=$('ocrStatus');
+  if(!state.text||!state.mapFrame){os.className='status warn';os.textContent='Marque a área do texto no mapa primeiro.';return;}
+  if(!sample)sample=await getAI();
+  if(!sample||!sampleOk){os.className='status warn';os.textContent='A leitura automática não está disponível aqui. Digite a frase.'+OFF_HINT;return;}
+  const f=state.mapFrame,s=f.width/vid.videoWidth,t=state.text;
+  const c=document.createElement('canvas');c.width=Math.max(1,Math.round(t.w*s));c.height=Math.max(1,Math.round(t.h*s));
+  c.getContext('2d').drawImage(f,t.x*s,t.y*s,t.w*s,t.h*s,0,0,c.width,c.height);
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));
+  readCtl?.abort();readCtl=new AbortController();
+  os.className='status';os.textContent='Lendo a frase…';$('readBtn').disabled=true;
+  try{
+    const out=await sample.json(
+      'A imagem é o topo de um Reels repostado: um cabeçalho de perfil (foto, nome, @usuário, selo) e uma frase em destaque. '+
+      'Transcreva SOMENTE a frase em destaque, exatamente como escrita (mesmo idioma, acentos, aspas, reticências e emojis). '+
+      'Ignore nome de perfil, @usuário, selos, marcas d\'água e textos de interface. '+
+      'Junte quebras de linha que são só quebra visual. Use "\\n" apenas quando houver blocos de frase separados por espaço. '+
+      'Se não houver frase, use string vazia. Responda só com JSON no formato {"frase":"..."}.',
+      {images:blob,modelTier:'quick',signal:readCtl.signal});
+    const fr=out&&typeof out.frase==='string'?out.frase.trim():'';
+    if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida. Veja as sugestões abaixo.';genSuggestions(fr);}
+    else{os.className='status';os.textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';genSuggestions('');}
+  }catch(e){
+    const code=e&&e.code;
+    if(code==='cancelled'){}
+    else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)){sampleOk=false;os.className='status warn';os.textContent=IN_VIEWER?'A leitura automática não foi liberada. Digite a frase.':'A chave da API foi recusada. Confira em Ajustes.';}
+    else if(code==='rate_limited'){os.className='status warn';os.textContent='Muitas leituras seguidas. Espere um pouco e toque em Ler texto do vídeo.';}
+    else{os.className='status warn';os.textContent='Não consegui ler agora. Toque em Ler texto do vídeo para tentar de novo.';}
+  }finally{$('readBtn').disabled=!state.hasVideo;}
+}
+$('readBtn').onclick=readText;
+
+/* ---------- sugestões de frase / ideias quando não há frase ---------- */
+let sugCtl=null,lastOrig='';
+function renderSugg(orig,list){
+  const box=$('sugList');box.textContent='';
+  const add=(label,txt,why)=>{
+    const b=document.createElement('button');b.type='button';b.className='sug';b.setAttribute('aria-pressed',$('txt').value===txt);
+    const e=document.createElement('em');e.textContent=label;const t=document.createElement('b');t.textContent=txt;b.append(e,t);
+    if(why){const s=document.createElement('span');s.textContent=why;b.appendChild(s);}
+    b.onclick=()=>{$('txt').value=txt;box.querySelectorAll('.sug').forEach(x=>x.setAttribute('aria-pressed',x===b));};
+    box.appendChild(b);
+  };
+  if(orig)add('Original',orig,'');
+  list.forEach((s,i)=>add((orig?'Sugestão ':'Ideia ')+(i+1),s.texto,s.porque));
+}
+// quadros do vídeo inteiro (quadro completo, para ler legendas de fala e entender a história)
+async function sceneBlobs(max){
+  const all=state.shots||[],out=[];if(!all.length||max<1)return out;
+  const pick=[];for(let i=0;i<Math.min(max,all.length);i++)pick.push(all[Math.round(i*(all.length-1)/Math.max(1,Math.min(max,all.length)-1))]);
+  for(const sc of pick){try{const b=await new Promise(res=>sc.toBlob(res,'image/jpeg',.8));if(b)out.push(b);}catch(e){}}
+  return out;
+}
+function framesNote(n){
+  const d=Math.round(vid.duration||0);
+  return n?`As ${n} imagens são quadros completos do vídeo inteiro, em ordem do começo ao fim (vídeo de ${d} s). `+
+    'Analise TODAS juntas como uma sequência: o que acontece do começo ao fim, quem fala, o que muda. '+
+    'Leia as legendas de fala que aparecem na tela (letras queimadas no vídeo): elas mostram o que está sendo dito. '+
+    'Ignore o card parado em cima (nome de perfil, @, frase fixa) e foque no conteúdo e na mensagem do vídeo.\n':'';
+}
+function userCtx(){const v=$('ctxIn').value.trim();return v?'O que o vídeo fala, segundo o dono do perfil (vale mais que as imagens): "'+v.replace(/"/g,"'").slice(0,1500)+'"\n':'';}
+const VOZ=
+  'Perfil: @ojhonatta1, empresário e investidor cristão. Público: gente comum que quer crescer, que trabalha muito, passa por luta, sente solidão no processo, quer liberdade financeira e tem fé. '+
+  'Formato do perfil: um card com uma frase curta em cima e uma cena de filme, série ou vídeo embaixo. A frase é uma REAÇÃO à cena: quem assiste tem que pensar "isso sou eu" e mandar pra um amigo. '+
+  'Os virais do perfil (2,1 mi, 1,1 mi e 1 mi de views) usam: "Quando você passou por várias dificuldades mas não desistiu, e enfim tudo começa dar certo", '+
+  '"Aquela sensação de fazer 1,5k no dia, sabendo que tem gente que ganha 1,5k no mês", "\\"Ficar sozinho é horrível\\" Eu sozinho e com dinheiro...", "Como é administrar um negócio".\n'+
+  'O MAIS IMPORTANTE: a pessoa tem que se ver na frase ou lembrar de alguém na hora. Escreva como se fosse ela pensando, ou como se a gente estivesse falando com ela. '+
+  'Formatos que geram identificação: "Eu quando…", "Eu tentando…", "Você quando…", "Você depois de…", "Aquela sensação de…", "Ninguém fala sobre…", "POV: você…". '+
+  'Formatos que geram envio e marcação: "Marca aquele amigo que…", "Manda pra quem…", "Se você conhece alguém assim, envia pra essa pessoa", "Ei, meu amigo, isso aqui é pra você que…". '+
+  'Regras da frase: linguagem do dia a dia, do jeito que o público fala; '+
+  'descreve um momento real e específico que o público vive; casa com o que a cena mostra (a cena é a reação ou a "resposta" da frase); '+
+  'no máximo 140 caracteres; português do Brasil natural, sem cara de coach, sem palavras difíceis, sem hashtags, no máximo 1 emoji; nada de prometer dinheiro garantido.\n';
+async function genSuggestions(orig){
+  lastOrig=orig;
+  const st=$('sugStatus'),noText=!orig;
+  $('sugg').hidden=false;$('moreSug').hidden=true;$('sugCtx').hidden=true;
+  $('sugTitle').textContent=noText?'Ideias de frase para esse vídeo (toque para usar)':'Sugestões para conectar mais com o público (toque para usar)';
+  renderSugg(orig,[]);
+  if(!sample)sample=await getAI();
+  if(!sample||!sampleOk){st.className='status warn';st.textContent=(noText?'Ideias automáticas indisponíveis aqui. Use o Banco de frases.':'Sugestões indisponíveis aqui.')+OFF_HINT;return;}
+  sugCtl?.abort();sugCtl=new AbortController();
+  st.className='status';st.textContent=noText?'Assistindo o vídeo e criando ideias…':'Criando sugestões…';
+  let imgs=[];
+  try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(7,lim.images.maxCount||1));}catch(e){}
+  const cena=framesNote(imgs.length)+userCtx();
+  const pedido=noText
+    ?'O vídeo NÃO tem frase no card. '+cena+'Primeiro resuma em uma linha do que o vídeo fala e qual a mensagem principal (não descreva só a imagem parada). Depois crie 3 frases de reação com alto potencial de viralizar para esse vídeo, cada uma num ângulo diferente: '+
+     '(1) identificação pessoal na voz de quem assiste ("Eu quando…", "Você quando…", "POV:"), (2) emoção, superação ou fé, ou humor de trabalho e negócio, o que combinar mais com o vídeo, (3) convite para marcar ou enviar para alguém ("Marca aquele amigo que…", "Manda pra quem…").\n'
+    :'Frase original tirada do vídeo: "'+orig.replace(/"/g,"'")+'"\n'+cena+'Analise a frase e a cena. Crie 3 versões melhores, com o mesmo sentido e a mesma linha, mas que façam a pessoa sentir que estamos falando dela. '+
+     'Ângulos: (1) identificação pessoal na voz de quem assiste ("Eu quando…", "Você quando…", "POV:"), (2) mais emocional ou provocativa, com contraste, (3) convite para marcar ou enviar para alguém ("Marca aquele amigo que…", "Manda pra quem…").\n';
+  try{
+    const out=await sample.json(VOZ+'\n'+pedido+'Para cada frase, diga em até 12 palavras por que ela conecta.\n'+
+      'Responda só com JSON: {"contexto":"do que o vídeo fala e a mensagem principal, em uma linha","sugestoes":[{"texto":"...","porque":"..."}]}',
+      {images:imgs.length?imgs:undefined,signal:sugCtl.signal,cache:false});
+    const list=(Array.isArray(out?.sugestoes)?out.sugestoes:[]).filter(s=>s&&typeof s.texto==='string'&&s.texto.trim()).slice(0,3).map(s=>({texto:s.texto.trim(),porque:String(s.porque||'').trim()}));
+    if(!list.length)throw {code:'empty_completion'};
+    renderSugg(orig,list);
+    const ctx=typeof out?.contexto==='string'?out.contexto.trim():'';
+    state.videoCtx=ctx;
+    if(ctx){const p=$('sugCtx');p.textContent='';const b=document.createElement('b');b.textContent='Leitura do vídeo: ';p.append(b,ctx);p.hidden=false;}
+    if(noText&&!$('txt').dataset.touched){$('txt').value=list[0].texto;$('sugList').querySelectorAll('.sug')[0]?.setAttribute('aria-pressed','true');}
+    st.className='status ok';st.textContent=noText?'A ideia 1 já foi para o card. Toque em outra para trocar.':'Escolha a que mais combina com você.';
+    $('moreSug').hidden=false;
+    if(noText){$('ocrStatus').className='status ok';$('ocrStatus').textContent='Sem frase no vídeo: ideias criadas a partir do vídeo inteiro.';}
+  }catch(e){
+    if(e&&e.code==='cancelled')return;
+    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e&&e.code))sampleOk=false;
+    st.className='status warn';st.textContent=e&&e.code==='rate_limited'?'Muitos pedidos seguidos. Espere um pouco e toque em Gerar outras 3.':'Não consegui criar agora. Toque em Gerar outras 3.';
+    $('moreSug').hidden=!sampleOk;
+  }
+}
+$('moreSug').onclick=()=>genSuggestions(lastOrig);
+$('ctxIn').addEventListener('change',()=>{if(state.hasVideo&&$('ctxIn').value.trim()){delete $('txt').dataset.touched;genSuggestions(lastOrig);}});
+$('txt').addEventListener('input',e=>{e.target.dataset.touched='1';});
+
+/* ---------- carregar vídeo ---------- */
+let srcUrl=null;
+async function loadVideo(file){
+  if(!file)return;
+  const an=$('anStatus');
+  state.hasVideo=false;state.scene=null;state.text=null;state.mapFrame=null;$('mapBox').hidden=true;
+  $('exportBtn').disabled=true;$('readBtn').disabled=true;$('playBtn').disabled=true;
+  delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';$('vidName').textContent=file.name;an.className='status';an.textContent='Carregando o vídeo…';
+  if(srcUrl)URL.revokeObjectURL(srcUrl);srcUrl=URL.createObjectURL(file);
+  vid.muted=true;vid.loop=true;vid.src=srcUrl;vid.load();
+  try{
+    if(vid.readyState<1)await waitEvent('loadedmetadata',20000);
+    if(vid.duration>130){an.className='status warn';an.textContent=`Esse vídeo tem ${Math.round(vid.duration)} s. O limite é 2 minutos: corte antes de subir.`;return;}
+    try{await vid.play();}catch(e){}
+    if(vid.readyState<2)await waitEvent('loadeddata canplay',20000);
+    vid.pause();
+  }catch(e){
+    an.className='status warn';
+    an.textContent='Não consegui abrir esse vídeo. Tente outro arquivo ou grave a tela e suba de novo.';
+    return;
+  }
+  if(!vid.videoWidth){an.className='status warn';an.textContent='O vídeo abriu sem imagem. Tente exportar da galeria de novo e suba outra vez.';return;}
+  state.hasVideo=true;$('dropHint').hidden=true;
+  try{await analyze();}
+  catch(e){state.analyzing=false;state.scene={x:0,y:0,w:vid.videoWidth,h:vid.videoHeight};state.text=null;
+    an.className='status warn';an.textContent='Não consegui separar cena e texto. Usei o vídeo inteiro: ajuste a cena no mapa ou com o zoom.';}
+  $('exportBtn').disabled=false;$('playBtn').disabled=false;$('readBtn').disabled=false;
+  $('meta').textContent=`1080 × 1920 · ${Math.round(vid.duration)} s · origem ${vid.videoWidth}×${vid.videoHeight}`;
+  if(state.text)readText();
+  else{$('ocrStatus').className='status';$('ocrStatus').textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';genSuggestions('');}
+}
+$('pickVid').onclick=()=>$('vidIn').click();
+$('vidIn').onchange=e=>{loadVideo(e.target.files[0]);e.target.value='';};
+$('reAnalyze').onclick=async()=>{if(state.hasVideo&&!state.exporting){await analyze();if(state.text)readText();}};
+$('pickAv').onclick=()=>$('avIn').click();
+$('avIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{
+  const s=Math.min(im.naturalWidth,im.naturalHeight),c=document.createElement('canvas');c.width=c.height=256;
+  c.getContext('2d').drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,256,256);
+  avatarData=c.toDataURL('image/jpeg',.85);avatar.src=avatarData;};im.src=URL.createObjectURL(f);};
+$('playBtn').onclick=()=>{if(state.paused){vid.play().catch(()=>{});state.paused=false;$('playBtn').textContent='Pausar prévia';}else{vid.pause();state.paused=true;$('playBtn').textContent='Tocar prévia';}};
+$('zoom').oninput=e=>{state.zoom=e.target.value/100;$('zoomV').textContent=e.target.value+'%';};
+$('pos').oninput=e=>{state.pos=e.target.value/100;$('posV').textContent=e.target.value<35?'topo':e.target.value>65?'base':'centro';};
+$('size').oninput=e=>{state.size=+e.target.value;$('sizeV').textContent=e.target.value;};
+
+/* ---------- exportação ---------- */
+let audioCtx=null,audioDest=null;
+function setupAudio(){
+  if(audioCtx)return true;
+  try{const AC=window.AudioContext||window.webkitAudioContext;audioCtx=new AC();
+    const src=audioCtx.createMediaElementSource(vid);audioDest=audioCtx.createMediaStreamDestination();src.connect(audioDest);return true;}
+  catch(e){audioCtx=null;return false;}
+}
+function pickMime(){
+  const opts=[['video/mp4;codecs=avc1.42E01E,mp4a.40.2','mp4'],['video/mp4;codecs=avc1','mp4'],['video/mp4','mp4'],['video/webm;codecs=vp9,opus','webm'],['video/webm;codecs=vp8,opus','webm'],['video/webm','webm']];
+  for(const [m,e] of opts){try{if(MediaRecorder.isTypeSupported(m))return {m,e};}catch(_){}}
+  return null;
+}
+function setStatus(t,cls){const s=$('status');s.textContent=t;s.className='status'+(cls?' '+cls:'');}
+$('exportBtn').onclick=async()=>{
+  if(state.exporting||!state.hasVideo||state.analyzing)return;
+  if(!window.MediaRecorder||!cv.captureStream){setStatus('Este navegador não grava vídeo. Abra no Safari ou no Chrome atualizado.','warn');return;}
+  const mime=pickMime();if(!mime){setStatus('Nenhum formato de vídeo disponível neste navegador.','warn');return;}
+  state.exporting=true;$('exportBtn').disabled=true;$('result').hidden=true;setStatus('Gerando… mantenha esta tela aberta.');
+  const stream=cv.captureStream(30);
+  if($('keepAudio').checked&&setupAudio()){try{await audioCtx.resume();audioDest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));}catch(e){}}
+  const rec=new MediaRecorder(stream,{mimeType:mime.m,videoBitsPerSecond:8000000});
+  const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  const done=new Promise(r=>rec.onstop=r);
+  vid.pause();vid.loop=false;vid.muted=!$('keepAudio').checked;await seekTo(0);
+  draw();
+  const phrase=$('txt').value.trim();
+  const capImgs=await captionImages();
+  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),caption:'',capState:'loading',capMsg:''};
+  genCaption(job);
+  rec.start(250);
+  let raf;const tick=()=>{draw();$('bar').style.width=Math.min(100,(vid.currentTime/vid.duration)*100)+'%';if(!vid.ended)raf=requestAnimationFrame(tick);};
+  const ended=new Promise(r=>vid.addEventListener('ended',r,{once:true}));
+  try{await vid.play();}catch(e){setStatus('O navegador bloqueou a reprodução. Toque em Gerar de novo.','warn');}
+  tick();await ended;cancelAnimationFrame(raf);draw();
+  await new Promise(r=>setTimeout(r,300));rec.stop();await done;
+  stream.getVideoTracks().forEach(t=>t.stop());
+  state.blob=new Blob(chunks,{type:mime.m.split(';')[0]});state.ext=mime.e;
+  addOutput(state.blob,mime.e,job);$('bar').style.width='100%';
+  const mb=(state.blob.size/1048576).toFixed(1);
+  setStatus(mime.e==='mp4'?`Pronto · MP4 · ${mb} MB`:`Pronto · WebM · ${mb} MB. Para MP4, gere pelo iPhone.`,mime.e==='mp4'?'ok':'warn');
+  vid.loop=true;vid.muted=true;await seekTo(0);if(!state.paused)vid.play().catch(()=>{});
+  state.exporting=false;$('exportBtn').disabled=false;
+};
+/* ---------- legenda com o Claude ---------- */
+async function captionImages(){
+  let imgs=[];
+  try{imgs=await sceneBlobs(7);}catch(e){}
+  return imgs;
+}
+let capRunning=0;
+async function genCaption(job){
+  job.capState='loading';job.capMsg='';refreshJob(job);
+  if(!sample)sample=await getAI();
+  if(!sample||!sampleOk){job.capState='err';job.capMsg='A legenda automática não está disponível aqui. Escreva a sua no campo acima.'+OFF_HINT;refreshJob(job);return;}
+  let imgs=job.imgs;
+  try{const lim=await sample.limits();if(!lim?.images)imgs=[];else{const m=lim.images.maxCount||1;if(imgs.length>m){const k=[];for(let i=0;i<m;i++)k.push(imgs[Math.round(i*(imgs.length-1)/Math.max(1,m-1))]);imgs=k;}}}catch(e){imgs=[];}
+  const prompt=
+    'Você escreve legendas de Instagram para Jhonatta (@ojhonatta1), empresário e investidor brasileiro, cristão, que posta Reels de motivação, disciplina e mentalidade. '+
+    'Tom: direto, firme, inspirador e natural, sem frase de coach de palco, sem prometer dinheiro ou resultado garantido.\n\n'+
+    'Frase do card do vídeo: "'+job.phrase.replace(/"/g,"'")+'"\n'+
+    (job.ctx?'Resumo do que o vídeo fala: "'+job.ctx.replace(/"/g,"'")+'"\n':'')+
+    job.userCtx+framesNote(imgs.length)+
+    'A legenda tem que falar da mensagem do vídeo inteiro, não da imagem parada. Não invente nomes de pessoas.\n'+
+    '\nEscreva em português do Brasil:\n'+
+    '1. Uma primeira linha forte que puxe a leitura (gancho).\n'+
+    '2. Dois ou três parágrafos curtos que expliquem ou aprofundem a ideia da frase com uma reflexão prática que faça a pessoa se identificar e ler até o fim. Pode haver uma referência leve de fé quando combinar com o tema.\n'+
+    '3. Um CTA final em duas partes: primeiro convide a marcar ou enviar para alguém que precisa ver isso; depois convide a seguir @ojhonatta1, acompanhar os próximos vídeos e ver os stories.\n'+
+    'No máximo 3 emojis no texto todo. Entre 450 e 900 caracteres.\n'+
+    'Depois, exatamente 3 hashtags em português ligadas ao conteúdo (sem #, sem espaço dentro).\n\n'+
+    'Responda só com JSON: {"legenda":"texto com \\n entre parágrafos","hashtags":["a","b","c"]}';
+  capRunning++;
+  try{
+    const out=await sample.json(prompt,{images:imgs.length?imgs:undefined,cache:false});
+    const leg=typeof out?.legenda==='string'?out.legenda.trim():'';
+    const tags=Array.isArray(out?.hashtags)?out.hashtags.slice(0,3).map(h=>'#'+String(h).replace(/^#+/,'').replace(/\s+/g,'')).filter(h=>h.length>1):[];
+    if(!leg)throw {code:'empty_completion'};
+    job.caption=leg+(tags.length?'\n\n'+tags.join(' '):'');job.capState='ok';
+  }catch(e){
+    const c=e&&e.code;job.capState='err';
+    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(c)){sampleOk=false;job.capMsg=IN_VIEWER?'A legenda automática não foi liberada. Escreva a sua no campo acima.':'A chave da API foi recusada. Confira em Ajustes.';}
+    else if(c==='rate_limited')job.capMsg='Muitos pedidos seguidos. Espere um pouco e toque em Gerar outra legenda.';
+    else job.capMsg='Não consegui gerar a legenda agora. Toque em Gerar outra legenda.';
+  }finally{capRunning--;refreshJob(job);}
+}
+function refreshJob(job){
+  renderOutputs();
+  const o=outputs.find(x=>x.job===job);if(o&&job.capState!=='loading'){persistVideo(o);if(job.capState==='ok')saveLegenda(o);}
+  if(openItem&&openItem.job===job)fillSheet(openItem);
+}
+
+/* ---------- memória do aparelho (IndexedDB) ---------- */
+let dbp=null;
+function idb(){
+  if(dbp)return dbp;
+  dbp=new Promise((res,rej)=>{
+    let r;try{r=indexedDB.open('estudio-cards',1);}catch(e){rej(e);return;}
+    r.onupgradeneeded=()=>{const d=r.result;
+      if(!d.objectStoreNames.contains('videos'))d.createObjectStore('videos',{keyPath:'id'});
+      if(!d.objectStoreNames.contains('legendas'))d.createObjectStore('legendas',{keyPath:'id'});};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+  });
+  dbp.catch(()=>{dbp=null;});
+  return dbp;
+}
+async function dbAll(store){try{const d=await idb();return await new Promise((res,rej)=>{const q=d.transaction(store).objectStore(store).getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error);});}catch(e){return [];}}
+async function dbPut(store,v){try{const d=await idb();await new Promise((res,rej)=>{const t=d.transaction(store,'readwrite');t.objectStore(store).put(v);t.oncomplete=res;t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});return true;}catch(e){return false;}}
+async function dbDel(store,id){try{const d=await idb();await new Promise((res,rej)=>{const t=d.transaction(store,'readwrite');t.objectStore(store).delete(id);t.oncomplete=res;t.onerror=()=>rej(t.error);});return true;}catch(e){return false;}}
+
+function persistVideo(o){
+  const j=o.job;
+  return dbPut('videos',{id:o.id,blob:o.blob,ext:o.ext,name:o.name,date:o.date,phrase:j.phrase,caption:j.caption||'',capState:j.capState==='ok'?'ok':'err',ctx:j.ctx||'',userCtx:j.userCtx||''});
+}
+let legCache=[];
+async function saveLegenda(o){
+  const cap=(o.job.caption||'').trim();if(!cap)return;
+  await dbPut('legendas',{id:o.id,date:o.date,phrase:o.job.phrase,caption:cap});
+  let all=await dbAll('legendas');all.sort((a,b)=>b.date-a.date);
+  for(const x of all.slice(50))await dbDel('legendas',x.id);
+  renderLegendas();
+}
+let persistT=null;
+function persistSoon(o){clearTimeout(persistT);persistT=setTimeout(()=>{persistVideo(o);saveLegenda(o);},600);}
+
+/* ---------- legendas salvas ---------- */
+function fmtDate(t){try{return new Date(t).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+async function copyText(txt,statusEl,selectEl){
+  const ok=()=>{statusEl.className='status ok';statusEl.textContent='Legenda copiada. É só colar no Instagram.';};
+  const fallback=()=>{
+    if(selectEl){selectEl.focus();if(selectEl.select)selectEl.select();if(selectEl.setSelectionRange)selectEl.setSelectionRange(0,txt.length);}
+    else{const r=document.createRange();const tgt=statusEl.parentNode.querySelector('.leg.open p')||statusEl;r.selectNodeContents(tgt);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);}
+    statusEl.className='status warn';statusEl.textContent='Texto selecionado. Toque em Copiar no menu do celular.';
+  };
+  try{await navigator.clipboard.writeText(txt);ok();}catch(e){fallback();}
+}
+async function renderLegendas(){
+  const all=(await dbAll('legendas')).sort((a,b)=>b.date-a.date);legCache=all;
+  const box=$('legList');box.textContent='';
+  if(!all.length){const p=document.createElement('p');p.className='hint';p.textContent='Nenhuma legenda ainda. Elas aparecem aqui depois do primeiro vídeo gerado.';box.appendChild(p);return;}
+  all.forEach(x=>{
+    const d=document.createElement('div');d.className='leg';
+    const t=document.createElement('time');t.textContent=fmtDate(x.date);
+    const b=document.createElement('b');b.textContent=x.phrase||'Sem frase';
+    const p=document.createElement('p');p.textContent=x.caption;p.onclick=()=>d.classList.toggle('open');
+    const acts=document.createElement('div');acts.className='acts';
+    const c=document.createElement('button');c.type='button';c.className='btn gold';c.textContent='Copiar';
+    c.onclick=()=>{d.classList.add('open');copyText(x.caption,$('legStatus'),null);};
+    const del=document.createElement('button');del.type='button';del.className='btn danger';del.textContent='Apagar';
+    del.onclick=async()=>{if(del.dataset.armed){await dbDel('legendas',x.id);renderLegendas();}else{del.dataset.armed='1';del.textContent='Toque de novo para apagar';setTimeout(()=>{if(del.isConnected){delete del.dataset.armed;del.textContent='Apagar';}},3000);}};
+    acts.append(c,del);d.append(t,b,p,acts);box.appendChild(d);
+  });
+}
+
+/* ---------- últimos 3 vídeos + aba de postagem ---------- */
+let dl=null,openItem=null;const outputs=[];
+function addOutput(blob,ext,job){
+  const date=Date.now();
+  const name='card-'+new Date(date).toISOString().slice(0,19).replace(/[:T]/g,'-')+'.'+ext;
+  const o={id:String(date),date,blob,ext,name,job,url:URL.createObjectURL(blob)};
+  job.id=o.id;outputs.unshift(o);
+  while(outputs.length>3){const x=outputs.pop();URL.revokeObjectURL(x.url);dbDel('videos',x.id);if(openItem===x)closeSheet();}
+  persistVideo(o);if(job.capState==='ok')saveLegenda(o);renderOutputs();
+}
+async function restoreOutputs(){
+  const all=(await dbAll('videos')).sort((a,b)=>b.date-a.date);
+  for(const x of all.slice(3))dbDel('videos',x.id);
+  all.slice(0,3).forEach(x=>{
+    if(!x.blob)return;
+    const job={id:x.id,phrase:x.phrase||'',caption:x.caption||'',capState:x.caption?'ok':'err',capMsg:x.caption?'':'A legenda não ficou pronta. Toque em Gerar outra legenda.',imgs:[],ctx:x.ctx||'',userCtx:x.userCtx||''};
+    outputs.push({id:x.id,date:x.date,blob:x.blob,ext:x.ext,name:x.name,job,url:URL.createObjectURL(x.blob)});
+  });
+  renderOutputs();
+}
+function renderOutputs(){
+  const box=$('outs');box.textContent='';
+  outputs.forEach(o=>{
+    const d=document.createElement('button');d.type='button';d.className='out';d.setAttribute('aria-label','Abrir vídeo e legenda');
+    const v=document.createElement('video');v.src=o.url+'#t=0.5';v.muted=true;v.playsInline=true;v.preload='metadata';
+    const s=document.createElement('small');s.textContent=o.job.phrase||o.name;
+    const t=document.createElement('span');
+    t.className='tag'+(o.job.capState==='loading'?' wait':'');
+    t.textContent=o.job.capState==='loading'?'Gerando legenda…':o.job.capState==='ok'?'Legenda pronta':'Abrir';
+    d.append(v,s,t);d.onclick=()=>openSheet(o);box.appendChild(d);
+  });
+  $('result').hidden=!outputs.length;
+}
+function fillSheet(o){
+  const j=o.job,ta=$('capTxt'),st=$('capStatus');
+  if(j.capState==='loading'){if(!ta.dataset.edited)ta.value='';ta.placeholder='Gerando a legenda…';st.className='status';st.textContent='O Claude está escrevendo a legenda.';}
+  else if(j.capState==='ok'){if(!ta.dataset.edited)ta.value=j.caption;st.className='status ok';st.textContent='Legenda pronta. Revise, copie e poste.';}
+  else{ta.placeholder='Escreva a legenda aqui';st.className='status warn';st.textContent=j.capMsg;}
+  $('regenCap').disabled=j.capState==='loading';
+}
+function openSheet(o){
+  openItem=o;$('sheetVid').src=o.url;const ta=$('capTxt');delete ta.dataset.edited;ta.value=o.job.caption||'';
+  fillSheet(o);$('sheet').hidden=false;$('closeSheet').focus();
+}
+function closeSheet(){
+  if(openItem&&$('capTxt').dataset.edited){openItem.job.caption=$('capTxt').value;}
+  openItem=null;$('sheet').hidden=true;const v=$('sheetVid');v.pause();v.removeAttribute('src');v.load();
+}
+$('capTxt').addEventListener('input',e=>{e.target.dataset.edited='1';if(openItem){openItem.job.caption=e.target.value;persistSoon(openItem);}});
+$('closeSheet').onclick=closeSheet;
+$('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('sheet').hidden)closeSheet();});
+$('regenCap').onclick=()=>{if(!openItem)return;const ta=$('capTxt');delete ta.dataset.edited;openItem.job.caption='';genCaption(openItem.job);};
+$('sheetSave').onclick=()=>{if(openItem)saveOut(openItem);};
+$('copyCap').onclick=()=>{
+  const ta=$('capTxt'),txt=ta.value,st=$('capStatus');
+  if(!txt.trim()){st.className='status warn';st.textContent='A legenda ainda está vazia.';return;}
+  copyText(txt,st,ta);
+};
+async function saveOut(o){
+  const ok=()=>{setStatus('Vídeo enviado para salvar.','ok');if(openItem===o){$('capStatus').className='status ok';$('capStatus').textContent='Vídeo enviado para salvar. Agora copie a legenda.';}};
+  const bad=c=>{if(openItem===o){$('capStatus').className='status warn';$('capStatus').textContent=c==='declined'?'Salvamento cancelado.':'Não foi possível salvar aqui.';}
+    setStatus(c==='declined'?'Salvamento cancelado.':c==='rate_limited'?'Já existe uma janela de salvar aberta. Aguarde um instante.':'Não foi possível salvar aqui ('+(c||'erro')+').','warn');};
+  if(IN_VIEWER){
+    if(!dl){try{dl=await window.claude.use('downloads');}catch(e){dl=null;}}
+    if(!dl){setStatus('O salvamento não está disponível nesta visualização. Abra o estúdio no app do Claude.','warn');return;}
+    try{await dl.save({filename:o.name,data:o.blob});ok();}catch(e){bad(e&&e.code);}
+    return;
+  }
+  try{
+    const f=new File([o.blob],o.name,{type:o.blob.type||(o.ext==='mp4'?'video/mp4':'video/webm')});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});ok();return;}
+  }catch(e){if(e&&e.name==='AbortError'){bad('declined');return;}}
+  const a=document.createElement('a');a.href=o.url;a.download=o.name;document.body.appendChild(a);a.click();a.remove();ok();
+}
+
+/* ---------- ajustes do web app ---------- */
+function refreshCfgUI(){
+  if(IN_VIEWER)return;
+  $('cfgSec').hidden=false;
+  const c=iaCfg();$('apiKey').value=c.key||'';if(c.model)$('apiModel').value=c.model;if(c.quick)$('apiQuick').value=c.quick;
+  $('aiBanner').hidden=!!c.key;
+}
+$('saveCfg').onclick=()=>{
+  const c={key:$('apiKey').value.trim(),model:$('apiModel').value.trim()||'claude-sonnet-5-5',quick:$('apiQuick').value.trim()||'claude-haiku-5-5'};
+  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent=c.key?'Chave salva neste aparelho.':'Chave removida.';}
+  catch(e){$('cfgStatus').className='status warn';$('cfgStatus').textContent='Este navegador não deixou salvar.';}
+  sample=null;sampleOk=true;refreshCfgUI();
+};
+$('clearCfg').onclick=()=>{try{localStorage.removeItem(CFG_KEY);}catch(e){}$('apiKey').value='';sample=null;sampleOk=true;$('cfgStatus').className='status';$('cfgStatus').textContent='Chave apagada deste aparelho.';refreshCfgUI();};
+$('testCfg').onclick=async()=>{
+  const st=$('cfgStatus');const c={key:$('apiKey').value.trim(),model:$('apiModel').value.trim(),quick:$('apiQuick').value.trim()};
+  if(!c.key){st.className='status warn';st.textContent='Cole a chave primeiro.';return;}
+  st.className='status';st.textContent='Testando…';
+  try{const ai=directAI(c);const out=await ai.json('Responda só com {"ok":true}.',{});st.className='status ok';st.textContent=out&&out.ok?'Conexão funcionando.':'A API respondeu, mas fora do formato. Pode usar normalmente.';}
+  catch(e){st.className='status warn';st.textContent=e.code==='not_granted'?'Chave recusada. Confira se copiou inteira.':e.code==='rate_limited'?'Limite atingido. Tente daqui a pouco.':'Não conectou'+(e.status?' (erro '+e.status+')':'')+(e.message?': '+e.message:'.');}
+};
+
+/* ---------- web app instalável ---------- */
+if(!IN_VIEWER&&'serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+}
+
+loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();
+const go=()=>{draw();requestAnimationFrame(loop);};
+avatar.onload=draw;
+if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('800 60px Montserrat'),document.fonts.load('700 44px Montserrat'),document.fonts.load('500 36px Montserrat')]).finally(go);}else go();
+})();
+</script>
