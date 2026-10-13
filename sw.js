@@ -1,5 +1,5 @@
 // Service worker do Estúdio de Cards. A versão muda a cada build (build.py).
-const VERSION = "6d76d44d31";
+const VERSION = "8e348c9ab4";
 const CACHE = "estudio-" + VERSION;
 const SHELL = [
   "./",

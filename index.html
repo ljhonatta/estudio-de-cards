@@ -559,16 +559,52 @@ async function getAI(){
 }
 const OFF_HINT=IN_VIEWER?'':' Coloque o código de acesso em Ajustes.';
 
+/* ---------- leitura da frase no aparelho (OCR), quando a IA não está disponível ---------- */
+const OCR_JS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let ocrWorker=null;
+function loadScript(src){return new Promise((res,rej)=>{const e=document.createElement('script');e.src=src;e.onload=res;e.onerror=()=>rej(new Error('script'));document.head.appendChild(e);});}
+async function localRead(c){
+  if(!ocrWorker)ocrWorker=(async()=>{if(!window.Tesseract)await loadScript(OCR_JS);return Tesseract.createWorker('por');})();
+  let w;try{w=await ocrWorker;}catch(e){ocrWorker=null;throw e;}
+  // amplia e passa para cinza: letra de Reels costuma ser pequena no quadro
+  const k=Math.max(1,Math.min(3,1600/c.width)),g=document.createElement('canvas');g.width=Math.round(c.width*k);g.height=Math.round(c.height*k);
+  const x=g.getContext('2d');x.filter='grayscale(1) contrast(1.4)';x.drawImage(c,0,0,g.width,g.height);
+  const {data}=await w.recognize(g);
+  let lines=(data.lines||[]).filter(l=>l.text.trim()).sort((p,q)=>p.bbox.y0-q.bbox.y0);
+  // tira o cabeçalho do perfil (nome e @), que fica separado da frase por um espaço maior que o entre linhas
+  if(lines.length>2){
+    const gaps=lines.slice(1).map((l,i)=>l.bbox.y0-lines[i].bbox.y1);
+    const lh=lines.reduce((t,l)=>t+l.bbox.y1-l.bbox.y0,0)/lines.length;
+    let cut=0,best=0;for(let i=0;i<Math.min(3,gaps.length);i++)if(gaps[i]>best){best=gaps[i];cut=i+1;}
+    const rest=gaps.slice(cut);
+    if(cut&&cut<lines.length&&best>lh*.6&&best>1.5*Math.max(0,...rest))lines=lines.slice(cut);
+  }
+  let txt=lines.filter(l=>l.confidence>=45).map(l=>l.text.replace(/\s+/g,' ').trim());
+  const at=txt.findIndex(l=>/@\w/.test(l));if(at>=0&&at<2)txt=txt.slice(at+1);
+  txt=txt.filter(l=>!/@\w/.test(l)&&/[\p{L}]{2}/u.test(l));
+  return txt.join(' ').replace(/\s+([,.!?…])/g,'$1').trim();
+}
+
 /* ---------- leitura da frase com o Claude ---------- */
 let sample=null,sampleOk=true,readCtl=null;
+async function readLocal(c,os,why){
+  os.className='status';os.textContent=(why?why+' ':'')+'Lendo a frase no aparelho…';
+  try{
+    const fr=await localRead(c);
+    if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida no aparelho. Confira se ficou certinha.'+(sample&&sampleOk?' Veja as sugestões abaixo.':'');
+      if(sample&&sampleOk)genSuggestions(fr);}
+    else{os.className='status warn';os.textContent='Não achei frase nessa área. Marque a área do texto no mapa ou digite a frase.';}
+  }catch(e){os.className='status warn';os.textContent='Não consegui ler a frase. Digite a frase.'+OFF_HINT;}
+  finally{$('readBtn').disabled=!state.hasVideo;}
+}
 async function readText(){
   const os=$('ocrStatus');
   if(!state.text||!state.mapFrame){os.className='status warn';os.textContent='Marque a área do texto no mapa primeiro.';return;}
-  if(!sample)sample=await getAI();
-  if(!sample||!sampleOk){os.className='status warn';os.textContent='A leitura automática não está disponível aqui. Digite a frase.'+OFF_HINT;return;}
   const f=state.mapFrame,s=f.width/vid.videoWidth,t=state.text;
   const c=document.createElement('canvas');c.width=Math.max(1,Math.round(t.w*s));c.height=Math.max(1,Math.round(t.h*s));
   c.getContext('2d').drawImage(f,t.x*s,t.y*s,t.w*s,t.h*s,0,0,c.width,c.height);
+  if(!sample)sample=await getAI();
+  if(!sample||!sampleOk){$('readBtn').disabled=true;return readLocal(c,os,'');}
   const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92));
   readCtl?.abort();readCtl=new AbortController();
   os.className='status';os.textContent='Lendo a frase…';$('readBtn').disabled=true;
@@ -585,11 +621,13 @@ async function readText(){
     else{os.className='status';os.textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';genSuggestions('');}
   }catch(e){
     const code=e&&e.code;
-    if(code==='cancelled'){}
-    else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)){sampleOk=false;os.className='status warn';os.textContent=IN_VIEWER?'A leitura automática não foi liberada. Digite a frase.':'A IA recusou o acesso. Confira o código em Ajustes.';}
-    else if(code==='rate_limited'){os.className='status warn';os.textContent='Muitas leituras seguidas. Espere um pouco e toque em Ler texto do vídeo.';}
-    else{os.className='status warn';os.textContent='Não consegui ler agora. Toque em Ler texto do vídeo para tentar de novo.';}
-  }finally{$('readBtn').disabled=!state.hasVideo;}
+    if(code==='cancelled'){$('readBtn').disabled=!state.hasVideo;return;}
+    let why='A IA não respondeu.';
+    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)){sampleOk=false;why=IN_VIEWER?'A leitura com IA não foi liberada.':'A IA recusou o acesso (confira o código em Ajustes).';}
+    else if(code==='rate_limited')why='A IA está no limite agora.';
+    return readLocal(c,os,why);
+  }
+  $('readBtn').disabled=!state.hasVideo;
 }
 $('readBtn').onclick=readText;
 

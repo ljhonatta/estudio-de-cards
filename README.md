@@ -5,7 +5,7 @@ Web app que transforma um Reels de referência no formato card do perfil @ojhona
 ## O que ele faz
 
 1. **Lê o vídeo:** separa a cena (o que se mexe) do texto parado e corta as bordas.
-2. **Lê a frase original** com IA e sugere 3 versões que geram identificação e marcação. Se o vídeo não tiver frase, analisa o vídeo inteiro (7 quadros e legendas de fala na tela) e cria 3 ideias.
+2. **Lê a frase original** com IA (ou, sem IA, com leitura no próprio aparelho) e sugere 3 versões que geram identificação e marcação. Se o vídeo não tiver frase, analisa o vídeo inteiro (7 quadros e legendas de fala na tela) e cria 3 ideias.
 3. **Exporta o card** em MP4 (no iPhone) com o áudio original.
 4. **Escreve a legenda** enquanto exporta: gancho, reflexão, CTA de marcação + seguir/stories e 3 hashtags.
 5. **Guarda no aparelho:** os 3 últimos vídeos e as 50 últimas legendas (IndexedDB). Nada vai para servidor.
