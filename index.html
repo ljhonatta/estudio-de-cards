@@ -61,7 +61,7 @@ h1 span{color:var(--gold)}
 .sec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .sec h2{font-family:var(--display);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
-input[type=text],input[type=url],input[type=email],input[type=password],textarea{width:100%;background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
+input[type=text],input[type=url],input[type=email],input[type=password],select,textarea{width:100%;background:var(--field);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:16px}
 textarea{min-height:96px;resize:vertical;font-family:"Montserrat",var(--body);font-weight:600}
 input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
@@ -150,6 +150,20 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .navItem:hover{border-color:var(--gold)}
 .navItem small{font-weight:500;font-size:12.5px;color:var(--muted)}
 .drView{display:flex;flex-direction:column;gap:12px}
+.profList{display:flex;flex-direction:column;gap:8px}
+.prof{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--field)}
+.prof img,.pfAv{width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none;background:#222}
+.pfAv{width:64px;height:64px}
+.prof div{flex:1;min-width:0;display:flex;flex-direction:column}
+.prof b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prof small{font-size:12.5px;color:var(--muted)}
+.prof .btn{padding:7px 10px;font-size:13px}
+.profForm{display:flex;flex-direction:column;gap:12px;border:1px solid var(--gold);border-radius:12px;padding:12px}
+.capOpts{display:flex;gap:6px;flex-wrap:wrap}
+.capOpts button{flex:1 1 90px;appearance:none;border:1px solid var(--line);background:var(--field);color:var(--muted);border-radius:10px;padding:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.capOpts button[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
+.trBox{font-size:13px}
+.trBox p{white-space:pre-line;margin:8px 0 0}
 /* tela de acesso */
 .gate{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto}
 .gbox{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px}
@@ -237,6 +251,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <label class="f">Do que o vídeo fala? (opcional, melhora as ideias e a legenda)
           <textarea id="ctxIn" style="min-height:64px;font-family:var(--body);font-weight:500;font-size:16px" placeholder="Ex.: o cara fala que quem não aguenta a solidão do processo nunca vai construir nada grande. Pode colar a legenda original do post."></textarea>
         </label>
+        <details class="trBox" id="trBox" hidden><summary id="trSum">Fala do vídeo</summary><p class="hint" id="trTxt"></p></details>
         <div class="sugg" id="sugg" hidden>
           <div class="hint" id="sugTitle">Sugestões para mexer mais com o público (toque para usar)</div>
           <p class="ctx" id="sugCtx" hidden></p>
@@ -261,18 +276,13 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
       </section>
 
       <section class="sec">
-        <h2>3 · Seu padrão</h2>
-        <div class="row">
-          <label class="f">Nome<input type="text" id="name" value="Jhonatta • VPR MKT"></label>
-          <label class="f">Arroba<input type="text" id="handle" value="@ojhonatta1"></label>
-        </div>
-        <label class="check"><input type="checkbox" id="badge" checked> Mostrar selo ao lado do nome</label>
+        <h2>3 · Perfil</h2>
+        <label class="f">Perfil que vai no card e na legenda<select id="profSel"></select></label>
         <div class="file">
-          <input type="file" id="avIn" accept="image/*" hidden>
-          <button class="btn" id="pickAv" type="button">Trocar foto</button>
-          <button class="btn gold" id="saveDef" type="button">Salvar como padrão</button>
+          <button class="btn" id="manageProf" type="button">Criar ou editar perfis</button>
+          <button class="btn gold" id="saveDef" type="button">Salvar letra e formato como padrão</button>
         </div>
-        <p class="hint" id="defStatus">Salva nome, arroba, foto, selo, tamanho da letra, alinhamento e formato neste aparelho.</p>
+        <p class="hint" id="defStatus">O perfil escolhido fica lembrado. O botão salva tamanho da letra, alinhamento e formato neste aparelho.</p>
       </section>
 
       <section class="sec">
@@ -301,6 +311,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     </div>
     <nav class="navList" id="drMenu">
       <button class="navItem" type="button" data-view="leg">Legendas geradas<small>As últimas 50, para copiar de novo</small></button>
+      <button class="navItem" type="button" data-view="perfis">Perfis<small>Foto, nome, arroba e o jeito de escrever de cada perfil</small></button>
       <button class="navItem" type="button" data-view="cfg" id="navCfg">Configurações do web app<small>Chave da IA, modelos e instalação</small></button>
       <button class="navItem" type="button" data-view="conta" id="navConta">Conta<small id="contaMail">Acesso deste aparelho</small></button>
     </nav>
@@ -309,14 +320,29 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <div class="legList" id="legList"></div>
         <div class="status" id="legStatus"></div>
     </section>
+    <section class="drView" data-v="perfis" hidden>
+      <p class="hint">Cada perfil tem foto, nome, arroba e selo do card, e um texto sobre o perfil que a IA usa para escrever frases e legendas no tom certo. Na hora de editar, você escolhe qual usar.</p>
+      <div class="profList" id="profList"></div>
+      <button class="btn gold" id="newProf" type="button">Novo perfil</button>
+      <form class="profForm" id="profForm" hidden>
+        <div class="file"><img class="pfAv" id="pfAv" alt="Foto do perfil"><input type="file" id="pfAvIn" accept="image/*" hidden><button class="btn" id="pfPick" type="button">Escolher foto</button></div>
+        <label class="f">Nome no card<input type="text" id="pfName" required maxlength="40"></label>
+        <label class="f">Arroba<input type="text" id="pfHandle" required maxlength="40" placeholder="@seuperfil"></label>
+        <label class="check"><input type="checkbox" id="pfBadge"> Mostrar selo ao lado do nome</label>
+        <label class="f">Sobre o perfil (a IA usa nas frases e legendas)<textarea id="pfAbout" style="min-height:96px;font-family:var(--body);font-weight:500" placeholder="Ex.: empresário cristão; público quer crescer, trabalha muito e tem fé; tom direto e inspirador, sem cara de coach."></textarea></label>
+        <div class="file"><button class="btn gold" type="submit">Salvar perfil</button><button class="btn" type="button" id="pfCancel">Cancelar</button></div>
+      </form>
+      <div class="status" id="profStatus"></div>
+    </section>
     <section class="drView" data-v="cfg" id="cfgSec" hidden>
         <p class="hint">Tudo aqui fica salvo neste aparelho, mesmo fechando o app. Salva sozinho quando você muda um campo.</p>
-        <label class="f">Chave da API (Anthropic ou OpenAI)<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-… ou sk-proj-…"></label>
+        <div class="status" id="aiMode"></div>
+        <label class="f">Endereço do servidor<input type="url" id="apiServer" spellcheck="false" value="https://estudio-de-cards.vercel.app"></label>
+        <p class="hint">Com o servidor no ar, o login e a IA passam por ele e nenhuma chave fica no celular.</p>
         <details>
-          <summary>Proxy na Vercel (opcional)</summary>
-          <p class="hint">Com o proxy, a chave fica no servidor e aqui vai só o código de acesso. Se o código estiver preenchido, ele tem prioridade sobre a chave.</p>
-          <label class="f">Código de acesso<input type="password" id="apiCode" autocomplete="off" spellcheck="false"></label>
-          <label class="f">Endereço do proxy<input type="url" id="apiProxy" spellcheck="false" value="https://estudio-de-cards.vercel.app/api/claude"></label>
+          <summary>Sem servidor: chave direto neste aparelho</summary>
+          <p class="hint">Só use se o servidor não estiver no ar. Aceita chave da Anthropic ou da OpenAI (a da OpenAI também transcreve a fala dos vídeos).</p>
+          <label class="f">Chave da API<input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-… ou sk-proj-…"></label>
         </details>
         <div class="row">
           <label class="f">Modelo principal<input type="text" id="apiModel" spellcheck="false" value="claude-sonnet-5-5"></label>
@@ -339,6 +365,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     </section>
     <section class="drView" data-v="conta" hidden>
       <p class="hint">Entrou como <b id="contaMail2"></b>. O login automático dura 30 dias neste aparelho.</p>
+      <p class="status" id="contaMode"></p>
       <button class="btn" id="logoutBtn" type="button">Sair</button>
       <p class="hint">Sair só tranca o app. Seus vídeos, legendas e configurações continuam salvos para quando você entrar de novo.</p>
     </section>
@@ -349,13 +376,14 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
   <div class="box">
     <div class="head"><h3 id="sheetTitle">Vídeo pronto para postar</h3><button class="btn" id="closeSheet" type="button">Fechar</button></div>
     <video id="sheetVid" controls playsinline></video>
+    <div class="capOpts" id="capOpts" role="group" aria-label="Opções de legenda" hidden></div>
     <label class="f">Legenda com hashtags (pode editar)
       <textarea id="capTxt" placeholder="Gerando a legenda…"></textarea>
     </label>
     <div class="status" id="capStatus"></div>
     <div class="capbar">
       <button class="btn gold" id="copyCap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Copiar legenda</button>
-      <button class="btn" id="regenCap" type="button">Gerar outra legenda</button>
+      <button class="btn" id="regenCap" type="button">Gerar outras 3</button>
     </div>
     <button class="btn gold big" id="sheetSave" type="button">Baixar vídeo na galeria</button>
   </div>
@@ -370,22 +398,19 @@ const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const vid=document.getElementById('src');
 const $=id=>document.getElementById(id);
 const DEFAULT_AV='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/6xaJSlACEQAAAAEAABZ/anVtYgAAAB5qdW1kYzJwYQARABCAAACqADibcQNjMnBhAAAAFllqdW1iAAAAR2p1bWRjMm1hABEAEIAAAKoAOJtxA3VybjpjMnBhOjg3N2RlODRhLWQ4ZTItNGE4OS04ZGZjLTRjYjI4MzYyMDVlMAAAAAOUanVtYgAAAClqdW1kYzJhcwARABCAAACqADibcQNjMnBhLmFzc2VydGlvbnMAAAAAuWp1bWIAAABEanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5pbmdyZWRpZW50LnYzAAAAABhjMnNoelByqlh9Ge8tzbLIe4BLaAAAAG1jYm9yo2lkYzpmb3JtYXRqaW1hZ2UvanBlZ2ppbnN0YW5jZUlEeCx4bXA6aWlkOjczMzBkZWYzLTRjNGItNDU0YS05OWZiLWFjOWI3ZmE4NWYyZWxyZWxhdGlvbnNoaXBocGFyZW50T2YAAAHianVtYgAAAEFqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmFjdGlvbnMudjIAAAAAGGMyc2i2bVuKlwMRW0T7A/kvC4ASAAABmWNib3KiZ2FjdGlvbnOComZhY3Rpb25rYzJwYS5vcGVuZWRqcGFyYW1ldGVyc6FraW5ncmVkaWVudHOBomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCBufdsiNfu9xqkJS70cEUrDHUcnD5PXM4YjB5zUr0Zw5qRmYWN0aW9ueB1jb20uYW50aHJvcGljLmNsYXVkZS5wcm92aWRlZGpwYXJhbWV0ZXJzoXgfY29tLmFudGhyb3BpYy5vcmlnaW4tY29uZmlkZW5jZWd1bmtub3dua2Rlc2NyaXB0aW9ueGZDbGF1ZGUgcHJvdmlkZWQgdGhpcyBmaWxlIGF0IHRoZSByZXF1ZXN0IG9mIGEgdXNlciBhbmQgbWF5IGhhdmUgY3JlYXRlZCBvciBtb2RpZmllZCB0aGUgZmlsZSBjb250ZW50cy5tc29mdHdhcmVBZ2VudKFkbmFtZWZDbGF1ZGVyYWxsQWN0aW9uc0luY2x1ZGVk9QAAAMhqdW1iAAAAQGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaGFzaC5kYXRhAAAAABhjMnNog/EN54cuteSVrQHiwJ8CeQAAAIBjYm9ypWNhbGdmc2hhMjU2Y3BhZE4AAAAAAAAAAAAAAAAAAGRoYXNoWCAWCv7pg8TawkQjGrtQVI/KmTwd/K+06Z7YDeCeJohAgmRuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBRmbGVuZ3RoGRaLAAACPmp1bWIAAAAnanVtZGMyY2wAEQAQgAAAqgA4m3EDYzJwYS5jbGFpbS52MgAAAAIPY2JvcqVjYWxnZnNoYTI1NmlzaWduYXR1cmV4TXNlbGYjanVtYmY9L2MycGEvdXJuOmMycGE6ODc3ZGU4NGEtZDhlMi00YTg5LThkZmMtNGNiMjgzNjIwNWUwL2MycGEuc2lnbmF0dXJlamluc3RhbmNlSUR4LHhtcDppaWQ6NjQzOTIyMzMtYjhjOC00MTU5LWE2ZTEtOTMwYThiNjRmNjdkcmNyZWF0ZWRfYXNzZXJ0aW9uc4OiY3VybHgtc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5pbmdyZWRpZW50LnYzZGhhc2hYIG592yI1+73GqQlLvRwRSsMdRycPk9czhiMHnNSvRnDmomN1cmx4KnNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuYWN0aW9ucy52MmRoYXNoWCCjoKSvUo+out4lLRIlyMoG/QYhyu36e2f68SzA8ydIzKJjdXJseClzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmhhc2guZGF0YWRoYXNoWCBvSg/5wnrNKkbSIo3cbjdoKFvEjYKAXaredea5Js1uW3RjbGFpbV9nZW5lcmF0b3JfaW5mb6NkbmFtZW9BbnRocm9waWMgRmlsZXNndmVyc2lvbmUxLjAuMGtzcGVjVmVyc2lvbmUyLjQuMAAAEDhqdW1iAAAAKGp1bWRjMmNzABEAEIAAAKoAOJtxA2MycGEuc2lnbmF0dXJlAAAAEAhjYm9y0oRZAhKiASYYIVkCCjCCAgYwggGNoAMCAQICFEDloAruwjnQvriD+gZCBT1nVRMAMAoGCCqGSM49BAMDMEkxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMS4wLAYDVQQDEyVBbnRocm9waWMgQ29udGVudCBDcmVkZW50aWFscyBSb290IENBMB4XDTI2MDgwNzE4NDM1NloXDTI4MDgwNjE5NDM1NlowRDEXMBUGA1UEChMOQW50aHJvcGljLCBQQkMxKTAnBgNVBAMTIEFudGhyb3BpYyBDbGF1ZGUgQ29udGVudCBTaWduaW5nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmHoKa8tQGAUU1TS9QqU5W0Tp2N3XsvlK7BfQt6YWKwEzd2R3/dzKPEUDdCjlLjp9fT+KFjRVnuZ9v0oXvTe3k6NYMFYwDgYDVR0PAQH/BAQDAgeAMBUGA1UdJQQOMAwGCisGAQQBg+heAgEwDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBTOUeIEgU5kWyP448TPmj6cwddcwjAKBggqhkjOPQQDAwNnADBkAjAxcx0UngF60stVjs5G4T2eiptsBk5mf9oCtfJPAUBl8qs/PEXa8+gk1/X5QJ2DVcYCMHBfXN31YapiSqYvlIWrDVDJKOvXMl+kkz37Wt0PBI8sw486Mq6JeOhT+lRR4b1HCaFjcGFkWQ2eAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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';
-const avatar=new Image(); avatar.src=DEFAULT_AV; let avatarData=null;
+const avatar=new Image(); avatar.src=DEFAULT_AV;
 const state={fmt:'natural',align:'left',zoom:1,pos:.5,size:60,scene:null,text:null,hasVideo:false,exporting:false,analyzing:false,paused:false,blob:null,ext:'mp4',mode:null,mapFrame:null};
 
 /* ---------- padrão salvo ---------- */
 function loadDefaults(){
   let d=null;try{d=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
   if(!d)return;
-  if(d.name)$('name').value=d.name; if(d.handle)$('handle').value=d.handle;
-  if(typeof d.badge==='boolean')$('badge').checked=d.badge;
   if(d.size){state.size=d.size;$('size').value=d.size;$('sizeV').textContent=d.size;}
   if(d.align)setSeg('al',d.align); if(d.fmt)setSeg('fmt',d.fmt);
-  if(d.avatar){avatarData=d.avatar;avatar.src=d.avatar;}
 }
 $('saveDef').onclick=()=>{
-  const d={name:$('name').value,handle:$('handle').value,badge:$('badge').checked,size:state.size,align:state.align,fmt:state.fmt,avatar:avatarData};
-  try{localStorage.setItem(KEY,JSON.stringify(d));$('defStatus').textContent='Padrão salvo neste aparelho.';}
+  const d={...(lsGet(KEY)||{}),size:state.size,align:state.align,fmt:state.fmt};
+  try{localStorage.setItem(KEY,JSON.stringify(d));$('defStatus').textContent='Letra e formato salvos como padrão neste aparelho.';}
   catch(e){$('defStatus').textContent='Este navegador não deixou salvar. O padrão vale só enquanto a página estiver aberta.';}
 };
 function setSeg(kind,val){
@@ -455,10 +480,10 @@ function draw(){
   const tx=ax+ar*2+30;
   ctx.textBaseline='alphabetic';ctx.textAlign='left';
   ctx.font='700 44px Montserrat, system-ui, sans-serif';ctx.fillStyle='#f5f5f5';
-  const nm=$('name').value;ctx.fillText(nm,tx,ay+54);
-  if($('badge').checked)badge(tx+ctx.measureText(nm).width+32,ay+40,20);
+  const pf=curProf(),nm=pf.name;ctx.fillText(nm,tx,ay+54);
+  if(pf.badge)badge(tx+ctx.measureText(nm).width+32,ay+40,20);
   ctx.font='500 36px Montserrat, system-ui, sans-serif';ctx.fillStyle='#8b8b90';
-  ctx.fillText($('handle').value,tx,ay+104);
+  ctx.fillText(pf.handle,tx,ay+104);
   ctx.font=`800 ${size}px Montserrat, system-ui, sans-serif`;ctx.fillStyle='#fff';
   ctx.textAlign=state.align==='center'?'center':'left';
   const x0=state.align==='center'?W/2:PAD;
@@ -576,11 +601,12 @@ map.addEventListener('pointerup',()=>{
 });
 map.addEventListener('pointercancel',()=>{drag=null;drawMap();});
 
-/* ---------- IA: Claude dentro do app (artifact), proxy na Vercel ou API direta (web app) ---------- */
+/* ---------- IA: Claude dentro do app (artifact), servidor na Vercel (com login) ou chave direta ---------- */
 const IN_VIEWER=!!(window.claude&&window.claude.use);
 const CFG_KEY='estudioCards.ia';
-const PROXY_URL='https://estudio-de-cards.vercel.app/api/claude';
-const viaProxy=c=>!!(c.proxy&&c.code);
+const SERVER_URL='https://estudio-de-cards.vercel.app';
+const AI_LIMITS=async()=>({maxPromptBytes:262144,images:{maxCount:7,maxInputBytes:5e6,mediaTypes:['image/jpeg']}});
+const JSON_ONLY='\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.';
 function iaCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')||{};}catch(e){return {};}}
 function parseLoose(t){
   t=String(t||'').trim();try{return JSON.parse(t);}catch(e){}
@@ -591,26 +617,26 @@ function parseLoose(t){
 }
 function blobB64(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(b);});}
 // chave da OpenAI (sk-proj-…/sk-…): mesma interface, outra API
-const isOpenAI=c=>!viaProxy(c)&&/^sk-(?!ant-)/.test(c.key||'');
+const isOpenAI=c=>/^sk-(?!ant-)/.test(c.key||'');
 function openaiModel(c,quick){const m=quick?c.quick:c.model;return m&&!/^claude-/.test(m)?m:(quick?'gpt-4.1-mini':'gpt-4.1');}
 function openaiAI(cfg){
   const json=async(prompt,o={})=>{
     const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
     const content=[];
     for(const b of imgs.slice(0,7))content.push({type:'image_url',image_url:{url:'data:image/jpeg;base64,'+await blobB64(b)}});
-    content.push({type:'text',text:prompt+'\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.'});
+    content.push({type:'text',text:prompt+JSON_ONLY});
     let r;
     try{
       r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',signal:o.signal,
         headers:{'content-type':'application/json','authorization':'Bearer '+cfg.key},
-        body:JSON.stringify({model:openaiModel(cfg,o.modelTier==='quick'),max_completion_tokens:1600,response_format:{type:'json_object'},messages:[{role:'user',content}]})});
+        body:JSON.stringify({model:openaiModel(cfg,o.modelTier==='quick'),max_completion_tokens:3000,response_format:{type:'json_object'},messages:[{role:'user',content}]})});
     }catch(e){throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error'};}
     if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||'';}catch(e){}
       throw {code:r.status===401||r.status===403?'not_granted':r.status===429?'rate_limited':'upstream_error',status:r.status,message:msg};}
     const d=await r.json();
     return parseLoose(d.choices?.[0]?.message?.content||'');
   };
-  return {json,limits:async()=>({maxPromptBytes:262144,images:{maxCount:7,maxInputBytes:5e6,mediaTypes:['image/jpeg']}})};
+  return {json,limits:AI_LIMITS};
 }
 function directAI(cfg){
   if(isOpenAI(cfg))return openaiAI(cfg);
@@ -618,26 +644,99 @@ function directAI(cfg){
     const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
     const content=[];
     for(const b of imgs.slice(0,7))content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:await blobB64(b)}});
-    content.push({type:'text',text:prompt+'\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.'});
+    content.push({type:'text',text:prompt+JSON_ONLY});
     let r;
     try{
-      r=await fetch(viaProxy(cfg)?cfg.proxy:'https://api.anthropic.com/v1/messages',{method:'POST',signal:o.signal,
-        headers:viaProxy(cfg)?{'content-type':'application/json','x-app-code':cfg.code}
-          :{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:o.modelTier==='quick'?(cfg.quick||'claude-haiku-5-5'):(cfg.model||'claude-sonnet-5-5'),max_tokens:1600,messages:[{role:'user',content}]})});
+      r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:o.signal,
+        headers:{'content-type':'application/json','x-api-key':cfg.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:o.modelTier==='quick'?(cfg.quick||'claude-haiku-5-5'):(cfg.model||'claude-sonnet-5-5'),max_tokens:3000,messages:[{role:'user',content}]})});
     }catch(e){throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error'};}
     if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||'';}catch(e){}
       throw {code:r.status===401||r.status===403?'not_granted':r.status===429||r.status===529?'rate_limited':'upstream_error',status:r.status,message:msg};}
     const d=await r.json();
     return parseLoose((d.content||[]).filter(c=>c.type==='text').map(c=>c.text).join(''));
   };
-  return {json,limits:async()=>({maxPromptBytes:262144,images:{maxCount:7,maxInputBytes:5e6,mediaTypes:['image/jpeg']}})};
+  return {json,limits:AI_LIMITS};
+}
+// servidor: a chave fica na Vercel; o app manda só o token do login
+function serverBase(){return (iaCfg().server||SERVER_URL).trim().replace(/\/+$/,'');}
+function serverSession(){const x=lsGet(SES_KEY);return x&&x.mode==='server'&&x.token&&x.until>Date.now()?x:null;}
+function serverAI(base,token){
+  const json=async(prompt,o={})=>{
+    const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
+    const images=[];for(const b of imgs.slice(0,7))images.push(await blobB64(b));
+    let r;
+    try{
+      r=await fetch(base+'/api/ai',{method:'POST',signal:o.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
+        body:JSON.stringify({tier:o.modelTier==='quick'?'quick':'main',prompt:prompt+JSON_ONLY,images})});
+    }catch(e){throw {code:e&&e.name==='AbortError'?'cancelled':'upstream_error'};}
+    if(r.status===401){sessionExpired();throw {code:'cancelled'};}
+    if(!r.ok){let msg='';try{msg=(await r.json())?.error?.message||'';}catch(e){}
+      throw {code:r.status===403?'not_granted':r.status===429||r.status===529?'rate_limited':'upstream_error',status:r.status,message:msg};}
+    const d=await r.json();
+    return parseLoose(d.text||'');
+  };
+  return {json,limits:AI_LIMITS};
 }
 async function getAI(){
   if(IN_VIEWER){try{return await window.claude.use('sample');}catch(e){return null;}}
-  const cfg=iaCfg();return viaProxy(cfg)||cfg.key?directAI(cfg):null;
+  const ses=serverSession();if(ses)return serverAI(serverBase(),ses.token);
+  const cfg=iaCfg();return cfg.key?directAI(cfg):null;
 }
-const OFF_HINT=IN_VIEWER?'':' Coloque o código de acesso em Ajustes.';
+const OFF_HINT=IN_VIEWER?'':' Entre pelo servidor ou coloque uma chave em Configurações.';
+
+/* ---------- fala do vídeo: áudio → WAV 16 kHz → Whisper (servidor ou chave da OpenAI) ---------- */
+function transcriber(){
+  if(IN_VIEWER)return null;
+  const ses=serverSession();if(ses)return {server:serverBase(),token:ses.token};
+  const c=iaCfg();return isOpenAI(c)?{key:c.key}:null;
+}
+async function wavFromFile(file){
+  const AC=window.AudioContext||window.webkitAudioContext,OAC=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  const ac=new AC();
+  try{
+    const ab=await file.arrayBuffer();
+    const buf=await new Promise((res,rej)=>{const q=ac.decodeAudioData(ab,res,rej);if(q&&q.then)q.then(res,rej);});
+    const rate=16000,sec=Math.min(buf.duration,125);
+    const off=new OAC(1,Math.max(1,Math.ceil(sec*rate)),rate);
+    const src=off.createBufferSource();src.buffer=buf;src.connect(off.destination);src.start(0);
+    const out=await new Promise((res,rej)=>{off.oncomplete=e=>res(e.renderedBuffer);const q=off.startRendering();if(q&&q.then)q.then(res,rej);});
+    const pcm=out.getChannelData(0);
+    let sum=0;for(let i=0;i<pcm.length;i+=16)sum+=pcm[i]*pcm[i];
+    if(Math.sqrt(sum/(pcm.length/16))<0.004)return null; // silêncio
+    const dv=new DataView(new ArrayBuffer(44+pcm.length*2));
+    const w=(o,t)=>{for(let i=0;i<t.length;i++)dv.setUint8(o+i,t.charCodeAt(i));};
+    w(0,'RIFF');dv.setUint32(4,36+pcm.length*2,true);w(8,'WAVE');w(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+    dv.setUint32(24,rate,true);dv.setUint32(28,rate*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,pcm.length*2,true);
+    for(let i=0;i<pcm.length;i++){const v=Math.max(-1,Math.min(1,pcm[i]));dv.setInt16(44+i*2,v<0?v*0x8000:v*0x7fff,true);}
+    return new Blob([dv],{type:'audio/wav'});
+  }finally{try{ac.close();}catch(e){}}
+}
+async function transcribe(file){
+  const how=transcriber();if(!how)return {state:'off'};
+  let wav;try{wav=await wavFromFile(file);}catch(e){return {state:'noaudio'};}
+  if(!wav)return {state:'silent'};
+  try{
+    let r;
+    if(how.server)r=await fetch(how.server+'/api/transcribe',{method:'POST',headers:{'content-type':'audio/wav',authorization:'Bearer '+how.token},body:wav});
+    else{const f=new FormData();f.append('file',wav,'audio.wav');f.append('model','whisper-1');f.append('language','pt');
+      r=await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{authorization:'Bearer '+how.key},body:f});}
+    if(!r.ok)return {state:'err',status:r.status};
+    const t=String((await r.json()).text||'').trim();
+    return t?{state:'ok',text:t}:{state:'silent'};
+  }catch(e){return {state:'err'};}
+}
+function showTranscript(r){
+  const box=$('trBox'),sum=$('trSum'),txt=$('trTxt');
+  if(!r||r.state==='off'||r.state==='noaudio'){box.hidden=true;return;}
+  box.hidden=false;txt.textContent=r.text||'';
+  sum.textContent={loading:'Ouvindo a fala do vídeo…',ok:'Fala do vídeo (transcrita) · toque para ver',silent:'O vídeo não tem fala',err:'Não consegui transcrever a fala agora'}[r.state]||'Fala do vídeo';
+}
+async function falaCtx(){
+  if(state.trP)await Promise.race([state.trP,new Promise(r=>setTimeout(r,30000))]);
+  const t=state.transcript;
+  return t?'Fala do vídeo (transcrição do áudio, pode ter pequenos erros): "'+t.replace(/"/g,"'").slice(0,2500)+'"\n':'';
+}
 
 /* ---------- leitura da frase no aparelho (OCR), quando a IA não está disponível ---------- */
 const OCR_JS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
@@ -740,11 +839,17 @@ function framesNote(n){
     'Ignore o card parado em cima (nome de perfil, @, frase fixa) e foque no conteúdo e na mensagem do vídeo.\n':'';
 }
 function userCtx(){const v=$('ctxIn').value.trim();return v?'O que o vídeo fala, segundo o dono do perfil (vale mais que as imagens): "'+v.replace(/"/g,"'").slice(0,1500)+'"\n':'';}
-const VOZ=
-  'Perfil: @ojhonatta1, empresário e investidor cristão. Público: gente comum que quer crescer, que trabalha muito, passa por luta, sente solidão no processo, quer liberdade financeira e tem fé. '+
-  'Formato do perfil: um card com uma frase curta em cima e uma cena de filme, série ou vídeo embaixo. A frase é uma REAÇÃO à cena: quem assiste tem que pensar "isso sou eu" e mandar pra um amigo. '+
-  'Os virais do perfil (2,1 mi, 1,1 mi e 1 mi de views) usam: "Quando você passou por várias dificuldades mas não desistiu, e enfim tudo começa dar certo", '+
-  '"Aquela sensação de fazer 1,5k no dia, sabendo que tem gente que ganha 1,5k no mês", "\\"Ficar sozinho é horrível\\" Eu sozinho e com dinheiro...", "Como é administrar um negócio".\n'+
+const VOZ_JH='Perfil: @ojhonatta1, empresário e investidor cristão. Público: gente comum que quer crescer, que trabalha muito, passa por luta, sente solidão no processo, quer liberdade financeira e tem fé. ';
+const VOZ_FORMATO='Formato do perfil: um card com uma frase curta em cima e uma cena de filme, série ou vídeo embaixo. A frase é uma REAÇÃO à cena: quem assiste tem que pensar "isso sou eu" e mandar pra um amigo. ';
+const VOZ_VIRAIS='Os virais do perfil (2,1 mi, 1,1 mi e 1 mi de views) usam: "Quando você passou por várias dificuldades mas não desistiu, e enfim tudo começa dar certo", '+
+  '"Aquela sensação de fazer 1,5k no dia, sabendo que tem gente que ganha 1,5k no mês", "\\"Ficar sozinho é horrível\\" Eu sozinho e com dinheiro...", "Como é administrar um negócio".\n';
+const isBaseProf=p=>String(p.handle||'').trim().toLowerCase()==='@ojhonatta1'&&!String(p.about||'').trim();
+function voz(){
+  const p=curProf();
+  if(isBaseProf(p))return VOZ_JH+VOZ_FORMATO+VOZ_VIRAIS+VOZ_REGRAS;
+  return 'Perfil: '+p.handle+'. '+(String(p.about||'').trim()?'Sobre o perfil e o público: '+p.about.trim()+' ':'')+VOZ_FORMATO+'\n'+VOZ_REGRAS;
+}
+const VOZ_REGRAS=
   'O MAIS IMPORTANTE: a pessoa tem que se ver na frase ou lembrar de alguém na hora. Escreva como se fosse ela pensando, ou como se a gente estivesse falando com ela. '+
   'Formatos que geram identificação: "Eu quando…", "Eu tentando…", "Você quando…", "Você depois de…", "Aquela sensação de…", "Ninguém fala sobre…", "POV: você…". '+
   'Formatos que geram envio e marcação: "Marca aquele amigo que…", "Manda pra quem…", "Se você conhece alguém assim, envia pra essa pessoa", "Ei, meu amigo, isso aqui é pra você que…". '+
@@ -763,14 +868,14 @@ async function genSuggestions(orig){
   st.className='status';st.textContent=noText?'Assistindo o vídeo e criando ideias…':'Criando sugestões…';
   let imgs=[];
   try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(7,lim.images.maxCount||1));}catch(e){}
-  const cena=framesNote(imgs.length)+userCtx();
+  const cena=framesNote(imgs.length)+userCtx()+await falaCtx();
   const pedido=noText
     ?'O vídeo NÃO tem frase no card. '+cena+'Primeiro resuma em uma linha do que o vídeo fala e qual a mensagem principal (não descreva só a imagem parada). Depois crie 3 frases de reação com alto potencial de viralizar para esse vídeo, cada uma num ângulo diferente: '+
      '(1) identificação pessoal na voz de quem assiste ("Eu quando…", "Você quando…", "POV:"), (2) emoção, superação ou fé, ou humor de trabalho e negócio, o que combinar mais com o vídeo, (3) convite para marcar ou enviar para alguém ("Marca aquele amigo que…", "Manda pra quem…").\n'
     :'Frase original tirada do vídeo: "'+orig.replace(/"/g,"'")+'"\n'+cena+'Analise a frase e a cena. Crie 3 versões melhores, com o mesmo sentido e a mesma linha, mas que façam a pessoa sentir que estamos falando dela. '+
      'Ângulos: (1) identificação pessoal na voz de quem assiste ("Eu quando…", "Você quando…", "POV:"), (2) mais emocional ou provocativa, com contraste, (3) convite para marcar ou enviar para alguém ("Marca aquele amigo que…", "Manda pra quem…").\n';
   try{
-    const out=await sample.json(VOZ+'\n'+pedido+'Para cada frase, diga em até 12 palavras por que ela conecta.\n'+
+    const out=await sample.json(voz()+'\n'+pedido+'Para cada frase, diga em até 12 palavras por que ela conecta.\n'+
       'Responda só com JSON: {"contexto":"do que o vídeo fala e a mensagem principal, em uma linha","sugestoes":[{"texto":"...","porque":"..."}]}',
       {images:imgs.length?imgs:undefined,signal:sugCtl.signal,cache:false});
     const list=(Array.isArray(out?.sugestoes)?out.sugestoes:[]).filter(s=>s&&typeof s.texto==='string'&&s.texto.trim()).slice(0,3).map(s=>({texto:s.texto.trim(),porque:String(s.porque||'').trim()}));
@@ -801,11 +906,17 @@ async function loadVideo(file){
   const an=$('anStatus');
   state.hasVideo=false;state.scene=null;state.text=null;state.mapFrame=null;$('mapBox').hidden=true;
   $('exportBtn').disabled=true;$('readBtn').disabled=true;$('playBtn').disabled=true;
-  delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';$('vidName').textContent=file.name;an.className='status';an.textContent='Carregando o vídeo…';
+  delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';
+  const seq=state.loadSeq=(state.loadSeq||0)+1;state.transcript='';
+  if(transcriber()){showTranscript({state:'loading'});
+    state.trP=transcribe(file).then(r=>{if(state.loadSeq===seq){state.transcript=r.text||'';showTranscript(r);}return r;});}
+  else{state.trP=null;showTranscript(null);}$('vidName').textContent=file.name;an.className='status';an.textContent='Carregando o vídeo…';
   if(srcUrl)URL.revokeObjectURL(srcUrl);srcUrl=URL.createObjectURL(file);
   vid.muted=true;vid.loop=true;vid.src=srcUrl;vid.load();
   try{
     if(vid.readyState<1)await waitEvent('loadedmetadata',20000);
+    // WebM gravado no navegador/Android chega sem duração: pular para o fim força o cálculo
+    if(!isFinite(vid.duration)){const d=waitEvent('durationchange',5000).catch(()=>{});vid.currentTime=1e7;await d;vid.currentTime=0;}
     if(vid.duration>130){an.className='status warn';an.textContent=`Esse vídeo tem ${Math.round(vid.duration)} s. O limite é 2 minutos: corte antes de subir.`;return;}
     try{await vid.play();}catch(e){}
     if(vid.readyState<2)await waitEvent('loadeddata canplay',20000);
@@ -828,11 +939,6 @@ async function loadVideo(file){
 $('pickVid').onclick=()=>$('vidIn').click();
 $('vidIn').onchange=e=>{loadVideo(e.target.files[0]);e.target.value='';};
 $('reAnalyze').onclick=async()=>{if(state.hasVideo&&!state.exporting){await analyze();if(state.text)readText();}};
-$('pickAv').onclick=()=>$('avIn').click();
-$('avIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const im=new Image();im.onload=()=>{
-  const s=Math.min(im.naturalWidth,im.naturalHeight),c=document.createElement('canvas');c.width=c.height=256;
-  c.getContext('2d').drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,256,256);
-  avatarData=c.toDataURL('image/jpeg',.85);avatar.src=avatarData;};im.src=URL.createObjectURL(f);};
 $('playBtn').onclick=()=>{if(state.paused){vid.play().catch(()=>{});state.paused=false;$('playBtn').textContent='Pausar prévia';}else{vid.pause();state.paused=true;$('playBtn').textContent='Tocar prévia';}};
 $('zoom').oninput=e=>{state.zoom=e.target.value/100;$('zoomV').textContent=e.target.value+'%';};
 $('pos').oninput=e=>{state.pos=e.target.value/100;$('posV').textContent=e.target.value<35?'topo':e.target.value>65?'base':'centro';};
@@ -866,7 +972,8 @@ $('exportBtn').onclick=async()=>{
   draw();
   const phrase=$('txt').value.trim();
   const capImgs=await captionImages();
-  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),caption:'',capState:'loading',capMsg:''};
+  const pf=curProf();
+  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:'loading',capMsg:''};
   genCaption(job);
   rec.start(250);
   let raf;const tick=()=>{draw();$('bar').style.width=Math.min(100,(vid.currentTime/vid.duration)*100)+'%';if(!vid.ended)raf=requestAnimationFrame(tick);};
@@ -895,32 +1002,43 @@ async function genCaption(job){
   if(!sample||!sampleOk){job.capState='err';job.capMsg='A legenda automática não está disponível aqui. Escreva a sua no campo acima.'+OFF_HINT;refreshJob(job);return;}
   let imgs=job.imgs;
   try{const lim=await sample.limits();if(!lim?.images)imgs=[];else{const m=lim.images.maxCount||1;if(imgs.length>m){const k=[];for(let i=0;i<m;i++)k.push(imgs[Math.round(i*(imgs.length-1)/Math.max(1,m-1))]);imgs=k;}}}catch(e){imgs=[];}
+  if(job.fala===undefined)job.fala=job.falaP?await job.falaP:'';
+  const pf=job.prof||curProf(),handle=pf.handle||'@ojhonatta1',about=String(pf.about||'').trim();
+  const quem=isBaseProf(pf)
+    ?'Você escreve legendas de Instagram para Jhonatta (@ojhonatta1), empresário e investidor brasileiro, cristão, que posta Reels de motivação, disciplina e mentalidade. '
+    :'Você escreve legendas de Instagram para o perfil '+handle+'. '+(about?'Sobre o perfil e o público: '+about+' ':'');
   const prompt=
-    'Você escreve legendas de Instagram para Jhonatta (@ojhonatta1), empresário e investidor brasileiro, cristão, que posta Reels de motivação, disciplina e mentalidade. '+
-    'Tom: direto, firme, inspirador e natural, sem frase de coach de palco, sem prometer dinheiro ou resultado garantido.\n\n'+
+    quem+'Tom: direto, firme, inspirador e natural, sem frase de coach de palco, sem prometer dinheiro ou resultado garantido.\n\n'+
     'Frase do card do vídeo: "'+job.phrase.replace(/"/g,"'")+'"\n'+
     (job.ctx?'Resumo do que o vídeo fala: "'+job.ctx.replace(/"/g,"'")+'"\n':'')+
-    job.userCtx+framesNote(imgs.length)+
+    job.userCtx+(job.fala||'')+framesNote(imgs.length)+
+    'Antes de escrever, entenda o contexto: junte a frase, a fala transcrita (quando houver) e os quadros para saber do que o vídeo realmente fala e qual a mensagem. '+
     'A legenda tem que falar da mensagem do vídeo inteiro, não da imagem parada. Não invente nomes de pessoas.\n'+
-    '\nEscreva em português do Brasil:\n'+
-    '1. Uma primeira linha forte que puxe a leitura (gancho).\n'+
-    '2. Dois ou três parágrafos curtos que expliquem ou aprofundem a ideia da frase com uma reflexão prática que faça a pessoa se identificar e ler até o fim. Pode haver uma referência leve de fé quando combinar com o tema.\n'+
-    '3. Um CTA final em duas partes: primeiro convide a marcar ou enviar para alguém que precisa ver isso; depois convide a seguir @ojhonatta1, acompanhar os próximos vídeos e ver os stories.\n'+
-    'No máximo 3 emojis no texto todo. Entre 450 e 900 caracteres.\n'+
-    'Depois, exatamente 3 hashtags em português ligadas ao conteúdo (sem #, sem espaço dentro).\n\n'+
-    'Responda só com JSON: {"legenda":"texto com \\n entre parágrafos","hashtags":["a","b","c"]}';
+    '\nEscreva 3 legendas diferentes em português do Brasil, cada uma num ângulo:\n'+
+    '(1) "Reflexão": aprofunda a mensagem do vídeo com uma lição prática.\n'+
+    '(2) "História": uma situação do dia a dia em que a pessoa se reconhece.\n'+
+    '(3) "Direta": curta e provocativa, entre 250 e 450 caracteres.\n'+
+    'Todas com: primeira linha forte que puxe a leitura (gancho); parágrafos curtos; '+
+    'CTA final em duas partes (primeiro convide a marcar ou enviar para alguém que precisa ver isso; depois convide a seguir '+handle+', acompanhar os próximos vídeos e ver os stories); '+
+    'no máximo 3 emojis; as legendas 1 e 2 entre 450 e 900 caracteres. Pode haver uma referência leve de fé quando combinar com o tema e com o perfil.\n'+
+    'Para cada legenda, exatamente 3 hashtags em português ligadas ao conteúdo (sem #, sem espaço dentro).\n\n'+
+    'Responda só com JSON: {"legendas":[{"angulo":"Reflexão","legenda":"texto com \\n entre parágrafos","hashtags":["a","b","c"]},{"angulo":"História",...},{"angulo":"Direta",...}]}';
   capRunning++;
   try{
     const out=await sample.json(prompt,{images:imgs.length?imgs:undefined,cache:false});
-    const leg=typeof out?.legenda==='string'?out.legenda.trim():'';
-    const tags=Array.isArray(out?.hashtags)?out.hashtags.slice(0,3).map(h=>'#'+String(h).replace(/^#+/,'').replace(/\s+/g,'')).filter(h=>h.length>1):[];
-    if(!leg)throw {code:'empty_completion'};
-    job.caption=leg+(tags.length?'\n\n'+tags.join(' '):'');job.capState='ok';
+    const raw=Array.isArray(out?.legendas)?out.legendas:out?.legenda?[out]:[];
+    const caps=raw.map((x,i)=>{
+      const leg=typeof x?.legenda==='string'?x.legenda.trim():'';
+      const tags=Array.isArray(x?.hashtags)?x.hashtags.slice(0,3).map(h=>'#'+String(h).replace(/^#+/,'').replace(/\s+/g,'')).filter(h=>h.length>1):[];
+      return leg?{label:String(x.angulo||'Opção '+(i+1)).trim().slice(0,20),text:leg+(tags.length?'\n\n'+tags.join(' '):'')}:null;
+    }).filter(Boolean).slice(0,3);
+    if(!caps.length)throw {code:'empty_completion'};
+    job.captions=caps;job.capSel=0;job.caption=caps[0].text;job.capState='ok';
   }catch(e){
     const c=e&&e.code;job.capState='err';
-    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(c)){sampleOk=false;job.capMsg=IN_VIEWER?'A legenda automática não foi liberada. Escreva a sua no campo acima.':'A IA recusou o acesso. Confira o código em Ajustes.';}
-    else if(c==='rate_limited')job.capMsg='Muitos pedidos seguidos. Espere um pouco e toque em Gerar outra legenda.';
-    else job.capMsg='Não consegui gerar a legenda agora. Toque em Gerar outra legenda.';
+    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(c)){sampleOk=false;job.capMsg=IN_VIEWER?'A legenda automática não foi liberada. Escreva a sua no campo acima.':'A IA recusou o acesso. Confira em Configurações.';}
+    else if(c==='rate_limited')job.capMsg='Muitos pedidos seguidos. Espere um pouco e toque em Gerar outras 3.';
+    else if(c!=='cancelled')job.capMsg='Não consegui gerar a legenda agora. Toque em Gerar outras 3.';
   }finally{capRunning--;refreshJob(job);}
 }
 function refreshJob(job){
@@ -949,7 +1067,7 @@ async function dbDel(store,id){try{const d=await idb();await new Promise((res,re
 
 function persistVideo(o){
   const j=o.job;
-  return dbPut('videos',{id:o.id,blob:o.blob,ext:o.ext,name:o.name,date:o.date,phrase:j.phrase,caption:j.caption||'',capState:j.capState==='ok'?'ok':'err',ctx:j.ctx||'',userCtx:j.userCtx||''});
+  return dbPut('videos',{id:o.id,blob:o.blob,ext:o.ext,name:o.name,date:o.date,phrase:j.phrase,caption:j.caption||'',captions:j.captions||[],capSel:j.capSel||0,capState:j.capState==='ok'?'ok':'err',ctx:j.ctx||'',userCtx:j.userCtx||'',fala:j.fala||'',prof:j.prof||null});
 }
 let legCache=[];
 async function saveLegenda(o){
@@ -1006,7 +1124,7 @@ async function restoreOutputs(){
   for(const x of all.slice(3))dbDel('videos',x.id);
   all.slice(0,3).forEach(x=>{
     if(!x.blob)return;
-    const job={id:x.id,phrase:x.phrase||'',caption:x.caption||'',capState:x.caption?'ok':'err',capMsg:x.caption?'':'A legenda não ficou pronta. Toque em Gerar outra legenda.',imgs:[],ctx:x.ctx||'',userCtx:x.userCtx||''};
+    const job={id:x.id,phrase:x.phrase||'',caption:x.caption||'',capState:x.caption?'ok':'err',capMsg:x.caption?'':'A legenda não ficou pronta. Toque em Gerar outra legenda.',imgs:[],ctx:x.ctx||'',userCtx:x.userCtx||'',fala:x.fala||'',prof:x.prof||null,captions:x.captions||[],capSel:x.capSel||0};
     outputs.push({id:x.id,date:x.date,blob:x.blob,ext:x.ext,name:x.name,job,url:URL.createObjectURL(x.blob)});
   });
   renderOutputs();
@@ -1024,10 +1142,16 @@ function renderOutputs(){
   });
   $('result').hidden=!outputs.length;
 }
+function renderCapOpts(o){
+  const j=o.job,box=$('capOpts');box.textContent='';
+  const list=j.capState==='ok'?(j.captions||[]):[];box.hidden=list.length<2;
+  list.forEach((c,i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i+1)+' · '+c.label;b.setAttribute('aria-pressed',i===(j.capSel||0));
+    b.onclick=()=>{j.capSel=i;j.caption=c.text;const ta=$('capTxt');delete ta.dataset.edited;ta.value=c.text;renderCapOpts(o);persistSoon(o);};box.appendChild(b);});
+}
 function fillSheet(o){
-  const j=o.job,ta=$('capTxt'),st=$('capStatus');
-  if(j.capState==='loading'){if(!ta.dataset.edited)ta.value='';ta.placeholder='Gerando a legenda…';st.className='status';st.textContent='O Claude está escrevendo a legenda.';}
-  else if(j.capState==='ok'){if(!ta.dataset.edited)ta.value=j.caption;st.className='status ok';st.textContent='Legenda pronta. Revise, copie e poste.';}
+  const j=o.job,ta=$('capTxt'),st=$('capStatus');renderCapOpts(o);
+  if(j.capState==='loading'){if(!ta.dataset.edited)ta.value='';ta.placeholder='Gerando a legenda…';st.className='status';st.textContent='A IA está entendendo o vídeo e escrevendo 3 legendas.';}
+  else if(j.capState==='ok'){if(!ta.dataset.edited)ta.value=j.caption;st.className='status ok';st.textContent=(j.captions||[]).length>1?'3 legendas prontas. Toque em 1, 2 ou 3 para trocar, revise e copie.':'Legenda pronta. Revise, copie e poste.';}
   else{ta.placeholder='Escreva a legenda aqui';st.className='status warn';st.textContent=j.capMsg;}
   $('regenCap').disabled=j.capState==='loading';
 }
@@ -1039,11 +1163,11 @@ function closeSheet(){
   if(openItem&&$('capTxt').dataset.edited){openItem.job.caption=$('capTxt').value;}
   openItem=null;$('sheet').hidden=true;const v=$('sheetVid');v.pause();v.removeAttribute('src');v.load();
 }
-$('capTxt').addEventListener('input',e=>{e.target.dataset.edited='1';if(openItem){openItem.job.caption=e.target.value;persistSoon(openItem);}});
+$('capTxt').addEventListener('input',e=>{e.target.dataset.edited='1';if(openItem){const j=openItem.job;j.caption=e.target.value;if(j.captions&&j.captions[j.capSel||0])j.captions[j.capSel||0].text=e.target.value;persistSoon(openItem);}});
 $('closeSheet').onclick=closeSheet;
 $('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('sheet').hidden)closeSheet();});
-$('regenCap').onclick=()=>{if(!openItem)return;const ta=$('capTxt');delete ta.dataset.edited;openItem.job.caption='';genCaption(openItem.job);};
+$('regenCap').onclick=()=>{if(!openItem)return;const ta=$('capTxt');delete ta.dataset.edited;openItem.job.caption='';openItem.job.captions=[];genCaption(openItem.job);};
 $('sheetSave').onclick=()=>{if(openItem)saveOut(openItem);};
 $('copyCap').onclick=()=>{
   const ta=$('capTxt'),txt=ta.value,st=$('capStatus');
@@ -1070,27 +1194,31 @@ async function saveOut(o){
 /* ---------- ajustes do web app ---------- */
 function refreshCfgUI(){
   if(IN_VIEWER)return;
-  const c=iaCfg();$('apiKey').value=c.key||'';$('apiCode').value=c.code||'';$('apiProxy').value=c.proxy||PROXY_URL;
+  const c=iaCfg(),ses=serverSession();$('apiKey').value=c.key||'';$('apiServer').value=c.server||SERVER_URL;
   if(c.model)$('apiModel').value=c.model;if(c.quick)$('apiQuick').value=c.quick;
-  $('aiBanner').hidden=viaProxy(c)||!!c.key;
+  $('aiBanner').hidden=!!ses||!!c.key;
+  const m=$('aiMode');
+  if(ses){m.className='status ok';m.textContent='IA pelo servidor (login '+ses.email+'). Nenhuma chave neste aparelho.';}
+  else if(c.key){m.className='status ok';m.textContent='IA pela chave deste aparelho ('+(isOpenAI(c)?'OpenAI, com transcrição da fala':'Anthropic')+').';}
+  else{m.className='status warn';m.textContent='IA desligada: o servidor não está conectado e não há chave neste aparelho.';}
 }
-function cfgFromUI(){return {code:$('apiCode').value.trim(),proxy:$('apiProxy').value.trim(),key:$('apiKey').value.trim(),
+function cfgFromUI(){return {server:$('apiServer').value.trim(),key:$('apiKey').value.trim(),
   model:$('apiModel').value.trim()||'claude-sonnet-5-5',quick:$('apiQuick').value.trim()||'claude-haiku-5-5'};}
 function saveCfg(){
   const c=cfgFromUI();
-  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent=viaProxy(c)?'Salvo. A IA vai pelo proxy.':c.key?'Chave salva neste aparelho.':'Salvo, mas sem chave a IA fica desligada.';}
+  try{localStorage.setItem(CFG_KEY,JSON.stringify(c));$('cfgStatus').className='status ok';$('cfgStatus').textContent='Salvo neste aparelho.';}
   catch(e){$('cfgStatus').className='status warn';$('cfgStatus').textContent='Este navegador não deixou salvar.';}
   sample=null;sampleOk=true;refreshCfgUI();
 }
 $('saveCfg').onclick=saveCfg;
-['apiKey','apiCode','apiProxy','apiModel','apiQuick'].forEach(id=>$(id).addEventListener('change',saveCfg));
-$('clearCfg').onclick=()=>{try{localStorage.removeItem(CFG_KEY);}catch(e){}$('apiKey').value='';$('apiCode').value='';sample=null;sampleOk=true;$('cfgStatus').className='status';$('cfgStatus').textContent='Código e chave apagados deste aparelho.';refreshCfgUI();};
+['apiKey','apiServer','apiModel','apiQuick'].forEach(id=>$(id).addEventListener('change',saveCfg));
+$('clearCfg').onclick=()=>{try{localStorage.removeItem(CFG_KEY);}catch(e){}$('apiKey').value='';sample=null;sampleOk=true;$('cfgStatus').className='status';$('cfgStatus').textContent='Chave e ajustes apagados deste aparelho.';refreshCfgUI();};
 $('testCfg').onclick=async()=>{
-  const st=$('cfgStatus');const c=cfgFromUI();
-  if(!viaProxy(c)&&!c.key){st.className='status warn';st.textContent='Coloque o código de acesso primeiro.';return;}
+  const st=$('cfgStatus');const c=cfgFromUI(),ses=serverSession();
+  if(!ses&&!c.key){st.className='status warn';st.textContent='Entre pelo servidor ou coloque uma chave primeiro.';return;}
   st.className='status';st.textContent='Testando…';
-  try{const ai=directAI(c);const out=await ai.json('Responda só com {"ok":true}.',{});st.className='status ok';st.textContent=out&&out.ok?'Conexão funcionando.':'A API respondeu, mas fora do formato. Pode usar normalmente.';}
-  catch(e){st.className='status warn';st.textContent=e.code==='not_granted'?(viaProxy(c)?'Código recusado pelo proxy. Confira o APP_CODE na Vercel.':'Chave recusada. Confira se copiou inteira.'):e.code==='rate_limited'?'Limite atingido. Tente daqui a pouco.':'Não conectou'+(e.status?' (erro '+e.status+')':'')+(e.message?': '+e.message:'.');}
+  try{const ai=ses?serverAI(serverBase(),ses.token):directAI(c);const out=await ai.json('Responda só com {"ok":true}.',{});st.className='status ok';st.textContent=out&&out.ok?'Conexão funcionando.':'A API respondeu, mas fora do formato. Pode usar normalmente.';}
+  catch(e){st.className='status warn';st.textContent=e.code==='not_granted'?'Chave recusada. Confira se copiou inteira.':e.code==='rate_limited'?'Limite atingido. Tente daqui a pouco.':'Não conectou'+(e.status?' (erro '+e.status+')':'')+(e.message?': '+e.message:'.');}
 };
 
 /* ---------- web app instalável ---------- */
@@ -1099,13 +1227,16 @@ if(!IN_VIEWER&&'serviceWorker' in navigator&&(location.protocol==='https:'||loca
 }
 
 /* ---------- menu lateral (⋮) ---------- */
-const VIEWS={leg:'Legendas geradas',cfg:'Configurações',conta:'Conta'};
+const VIEWS={leg:'Legendas geradas',perfis:'Perfis',cfg:'Configurações',conta:'Conta'};
 let drawerFrom=null;
 function showView(v){
   $('drMenu').hidden=!!v;$('drBack').hidden=!v;$('drTitle').textContent=v?VIEWS[v]:'Menu';
   document.querySelectorAll('#drawer [data-v]').forEach(x=>x.hidden=x.dataset.v!==v);
   if(v==='leg')renderLegendas();
-  if(v==='conta')$('contaMail2').textContent=(lsGet(ACC_KEY)||{}).email||'';
+  if(v==='perfis'){renderProfList();$('profForm').hidden=true;$('newProf').hidden=false;$('profStatus').textContent='';}
+  if(v==='cfg')refreshCfgUI();
+  if(v==='conta'){const x=lsGet(SES_KEY)||{};$('contaMail2').textContent=x.email||'';
+    $('contaMode').textContent=x.mode==='server'?'Login pelo servidor: a senha e a chave da IA ficam na Vercel.':'Login só neste aparelho (o servidor não respondeu quando você entrou).';}
 }
 function openDrawer(v){drawerFrom=document.activeElement;$('drawer').hidden=false;document.body.style.overflow='hidden';showView(v||null);$('drClose').focus();}
 function closeDrawer(){$('drawer').hidden=true;document.body.style.overflow='';if(drawerFrom&&drawerFrom.focus)drawerFrom.focus();}
@@ -1117,9 +1248,74 @@ $('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))closeDrawer()
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDrawer();});
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;}
+$('manageProf').onclick=()=>openDrawer('perfis');
 
-/* ---------- acesso: login neste aparelho, automático por 30 dias ---------- */
-// Não há servidor: a senha vira um hash PBKDF2 guardado só neste aparelho e tranca o app para quem pegar o celular.
+/* ---------- perfis: foto, nome, arroba, selo e o jeito de escrever ---------- */
+const PROF_KEY='estudioCards.perfis',CUR_KEY='estudioCards.perfilAtual';
+const BASE_PROF={id:'jhonatta',name:'Jhonatta • VPR MKT',handle:'@ojhonatta1',badge:true,avatar:'',about:''};
+let profiles=[],curId='',editId=null,editAv='';
+function loadProfiles(){
+  profiles=lsGet(PROF_KEY);
+  if(!Array.isArray(profiles)||!profiles.length){
+    const d=lsGet(KEY)||{}; // padrão antigo vira o primeiro perfil
+    profiles=[{...BASE_PROF,name:d.name||BASE_PROF.name,handle:d.handle||BASE_PROF.handle,badge:typeof d.badge==='boolean'?d.badge:true,avatar:d.avatar||''}];
+    lsSet(PROF_KEY,profiles);
+  }
+  curId=lsGet(CUR_KEY);if(!profiles.some(x=>x.id===curId))curId=profiles[0].id;
+  renderProfSel();applyProfile();
+}
+function curProf(){return profiles.find(x=>x.id===curId)||profiles[0]||BASE_PROF;}
+function applyProfile(){avatar.src=curProf().avatar||DEFAULT_AV;}
+function renderProfSel(){
+  const sel=$('profSel');sel.textContent='';
+  profiles.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.name+' · '+x.handle;sel.appendChild(o);});
+  sel.value=curId;
+}
+$('profSel').onchange=e=>{curId=e.target.value;lsSet(CUR_KEY,curId);applyProfile();};
+function renderProfList(){
+  const box=$('profList');box.textContent='';
+  profiles.forEach(x=>{
+    const row=document.createElement('div');row.className='prof';
+    const im=document.createElement('img');im.src=x.avatar||DEFAULT_AV;im.alt='';
+    const d=document.createElement('div');const b=document.createElement('b');b.textContent=x.name;const sm=document.createElement('small');sm.textContent=x.handle+(x.id===curId?' · em uso':'');d.append(b,sm);
+    const ed=document.createElement('button');ed.type='button';ed.className='btn';ed.textContent='Editar';ed.onclick=()=>editProf(x.id);
+    row.append(im,d,ed);
+    if(profiles.length>1){const del=document.createElement('button');del.type='button';del.className='btn danger';del.textContent='Apagar';
+      del.onclick=()=>{if(!del.dataset.armed){del.dataset.armed='1';del.textContent='Confirmar';setTimeout(()=>{if(del.isConnected){delete del.dataset.armed;del.textContent='Apagar';}},3000);return;}
+        profiles=profiles.filter(y=>y.id!==x.id);if(curId===x.id){curId=profiles[0].id;lsSet(CUR_KEY,curId);}
+        lsSet(PROF_KEY,profiles);renderProfSel();applyProfile();renderProfList();};
+      row.appendChild(del);}
+    box.appendChild(row);
+  });
+}
+function editProf(id){
+  const x=profiles.find(y=>y.id===id)||{name:'',handle:'@',badge:false,avatar:'',about:''};
+  editId=id;editAv=x.avatar||'';
+  $('pfAv').src=editAv||DEFAULT_AV;$('pfName').value=x.name;$('pfHandle').value=x.handle;$('pfBadge').checked=!!x.badge;$('pfAbout').value=x.about||'';
+  $('profForm').hidden=false;$('newProf').hidden=true;$('profStatus').textContent='';$('pfName').focus();
+}
+$('newProf').onclick=()=>editProf(null);
+$('pfCancel').onclick=()=>{$('profForm').hidden=true;$('newProf').hidden=false;};
+$('pfPick').onclick=()=>$('pfAvIn').click();
+$('pfAvIn').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const im=new Image();im.onload=()=>{
+  const m=Math.min(im.naturalWidth,im.naturalHeight),c=document.createElement('canvas');c.width=c.height=256;
+  c.getContext('2d').drawImage(im,(im.naturalWidth-m)/2,(im.naturalHeight-m)/2,m,m,0,0,256,256);
+  editAv=c.toDataURL('image/jpeg',.85);$('pfAv').src=editAv;URL.revokeObjectURL(im.src);};im.src=URL.createObjectURL(f);};
+$('profForm').onsubmit=e=>{
+  e.preventDefault();
+  let h=$('pfHandle').value.trim().replace(/\s+/g,'');if(h&&!h.startsWith('@'))h='@'+h;
+  const x={id:editId||('p'+Date.now().toString(36)),name:$('pfName').value.trim(),handle:h,badge:$('pfBadge').checked,avatar:editAv,about:$('pfAbout').value.trim()};
+  if(!x.name||x.handle.length<2){$('profStatus').className='status warn';$('profStatus').textContent='Preencha o nome e a arroba.';return;}
+  const i=profiles.findIndex(y=>y.id===x.id);if(i>=0)profiles[i]=x;else profiles.push(x);
+  if(!editId){curId=x.id;lsSet(CUR_KEY,curId);}
+  const ok=lsSet(PROF_KEY,profiles);
+  renderProfSel();applyProfile();renderProfList();$('profForm').hidden=true;$('newProf').hidden=false;
+  $('profStatus').className=ok?'status ok':'status warn';$('profStatus').textContent=ok?'Perfil salvo'+(editId?'.':' e escolhido para o próximo vídeo.'):'Este navegador não deixou salvar. Tente uma foto menor.';
+};
+
+/* ---------- acesso: login pelo servidor (Vercel), automático por 30 dias ---------- */
+// O e-mail e a senha ficam nas variáveis da Vercel; o app guarda só o token assinado da sessão.
+// Se o servidor não responder, dá para criar um acesso só neste aparelho (hash PBKDF2), que some no primeiro login pelo servidor.
 const ACC_KEY='estudioCards.conta',SES_KEY='estudioCards.sessao',SES_DAYS=30;
 function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
@@ -1129,18 +1325,28 @@ async function passHash(pass,salt){
   return toB64(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:Uint8Array.from(atob(salt),c=>c.charCodeAt(0)),iterations:210000},k,256));
 }
 function unlock(){
-  $('gate').hidden=true;$('app').hidden=false;
-  const acc=lsGet(ACC_KEY);if(acc)$('contaMail').textContent=acc.email;
+  $('gate').hidden=true;$('app').hidden=false;sample=null;sampleOk=true;
+  const x=lsGet(SES_KEY);if(x&&x.email)$('contaMail').textContent=x.email;
+  refreshCfgUI();
   try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 }
-function showGate(){
-  const acc=lsGet(ACC_KEY),novo=!acc;
-  $('app').hidden=true;$('gate').hidden=false;closeDrawer();
-  $('gateHint').textContent=novo?'Crie o acesso deste aparelho. Depois de entrar, o login fica automático por 30 dias.':'Entre para abrir o estúdio.';
-  $('gPass2Wrap').hidden=!novo;$('gPass2').required=novo;$('gPass').autocomplete=novo?'new-password':'current-password';
-  $('gGo').textContent=novo?'Criar acesso':'Entrar';$('gForgot').hidden=novo;
-  $('gMail').value=acc?acc.email:'';$('gPass').value='';$('gPass2').value='';$('gStatus').textContent='';
-  (acc?$('gPass'):$('gMail')).focus();
+function showGate(msg){
+  const acc=lsGet(ACC_KEY),last=lsGet(SES_KEY);
+  $('app').hidden=true;$('gate').hidden=false;if(!$('drawer').hidden)closeDrawer();
+  $('gateHint').textContent=msg||'Entre com seu e-mail e senha. Depois de entrar, o login fica automático por 30 dias.';
+  $('gPass2Wrap').hidden=true;$('gPass2').required=false;$('gPass').autocomplete='current-password';
+  $('gGo').textContent='Entrar';$('gForgot').hidden=!acc;
+  $('gMail').value=(last&&last.email)||(acc&&acc.email)||'';$('gPass').value='';$('gPass2').value='';$('gStatus').textContent='';
+  ($('gMail').value?$('gPass'):$('gMail')).focus();
+}
+function sessionExpired(){try{localStorage.removeItem(SES_KEY);}catch(e){}showGate('Sua sessão expirou. Entre de novo.');}
+async function serverLogin(email,password){
+  try{
+    const r=await fetch(serverBase()+'/api/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,password})});
+    if(r.ok){const d=await r.json();if(d.token)return {ok:true,token:d.token,until:d.until,email:d.email};}
+    if(r.status===401)return {denied:true};
+    return {down:true};
+  }catch(e){return {down:true};}
 }
 $('gateForm').onsubmit=async e=>{
   e.preventDefault();
@@ -1148,14 +1354,29 @@ $('gateForm').onsubmit=async e=>{
   const bad=m=>{st.className='status warn';st.textContent=m;};
   if(!window.crypto||!crypto.subtle)return bad('Este navegador não tem suporte ao login. Abra pelo link https do app.');
   $('gGo').disabled=true;
+  st.className='status';st.textContent='Entrando…';
   try{
-    if(!acc){
+    const creating=!$('gPass2Wrap').hidden;
+    if(!creating){
+      const r=await serverLogin(mail,pass);
+      if(r.ok){
+        try{localStorage.removeItem(ACC_KEY);}catch(e){} // servidor no ar: acesso local deixa de valer
+        lsSet(SES_KEY,{mode:'server',token:r.token,until:r.until,email:r.email});st.textContent='';unlock();return;
+      }
+      if(r.denied)return bad('E-mail ou senha errados.');
+      if(!acc){
+        $('gPass2Wrap').hidden=false;$('gPass2').required=true;$('gPass').autocomplete='new-password';$('gGo').textContent='Criar acesso neste aparelho';
+        $('gateHint').textContent='O servidor ainda não está no ar. Repita a senha para criar um acesso só neste aparelho. Quando o servidor ligar, o login passa a ser por ele.';
+        st.textContent='';$('gPass2').focus();return;
+      }
+      if(mail!==acc.email||await passHash(pass,acc.salt)!==acc.hash)return bad('E-mail ou senha errados.');
+    }else{
       if(pass.length<6)return bad('Use uma senha com pelo menos 6 caracteres.');
       if(pass!==$('gPass2').value)return bad('As duas senhas não estão iguais.');
       const salt=toB64(crypto.getRandomValues(new Uint8Array(16)));
       if(!lsSet(ACC_KEY,{email:mail,salt,hash:await passHash(pass,salt)}))return bad('Este navegador não deixou salvar o acesso.');
-    }else if(mail!==acc.email||await passHash(pass,acc.salt)!==acc.hash)return bad('E-mail ou senha errados.');
-    lsSet(SES_KEY,{until:Date.now()+SES_DAYS*864e5});unlock();
+    }
+    lsSet(SES_KEY,{mode:'local',until:Date.now()+SES_DAYS*864e5,email:mail});st.textContent='';unlock();
   }finally{$('gGo').disabled=false;}
 };
 $('gForgot').onclick=()=>{
@@ -1168,9 +1389,9 @@ $('gForgot').onclick=()=>{
 };
 $('logoutBtn').onclick=()=>{try{localStorage.removeItem(SES_KEY);}catch(e){}showGate();};
 if(IN_VIEWER)unlock();
-else{const ses=lsGet(SES_KEY);if(lsGet(ACC_KEY)&&ses&&ses.until>Date.now())unlock();else showGate();}
+else{const ses=lsGet(SES_KEY),ok=ses&&ses.until>Date.now()&&(ses.mode==='server'?!!ses.token:!!lsGet(ACC_KEY));if(ok)unlock();else showGate();}
 
-loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();
+loadProfiles();loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();
 const go=()=>{draw();requestAnimationFrame(loop);};
 avatar.onload=draw;
 if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('800 60px Montserrat'),document.fonts.load('700 44px Montserrat'),document.fonts.load('500 36px Montserrat')]).finally(go);}else go();

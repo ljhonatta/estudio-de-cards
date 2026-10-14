@@ -19,20 +19,28 @@ O app fica publicado no GitHub Pages deste repositório.
 - **Android:** Chrome → menu ⋮ → "Instalar app".
 - **Computador:** Chrome ou Edge → ícone de instalar na barra de endereço.
 
-## IA
+## Servidor (Vercel): login e IA protegidos
 
-- **Dentro do app do Claude** (versão artifact), usa o Claude da própria conta, sem chave.
-- **No web app instalado**, usa o proxy na Vercel (`api/claude.js`). A chave da Anthropic fica só na Vercel; no app você digita apenas o **código de acesso** em **Ajustes do web app**.
-- Sem proxy, ainda dá para colar uma chave (`sk-ant-…`) direto em Ajustes ("Sem proxy"). Ela fica no `localStorage` do aparelho.
-- Modelos padrão: `claude-sonnet-5-5` (ideias e legendas) e `claude-haiku-5-5` (leitura da frase). Dá para trocar em Ajustes.
+O app é público no GitHub Pages, mas o login e a IA passam por funções na Vercel (`api/`). A senha e as chaves ficam só nas variáveis de ambiente da Vercel; o celular guarda apenas o token da sessão (30 dias).
 
-### Proxy na Vercel
+1. vercel.com → Add New → Project → importe `ljhonatta/estudio-de-cards` (framework "Other", sem build).
+2. Settings → Environment Variables:
+   - `LOGIN_EMAIL`: seu e-mail
+   - `LOGIN_PASSWORD`: sua senha do app
+   - `SESSION_SECRET`: um texto aleatório longo (40+ caracteres)
+   - `OPENAI_API_KEY`: chave da OpenAI (IA + transcrição da fala). Ou `ANTHROPIC_API_KEY` (sem transcrição).
+   - Opcionais: `OPENAI_MODEL` (padrão `gpt-4.1`), `OPENAI_MODEL_QUICK` (`gpt-4.1-mini`), `OPENAI_TRANSCRIBE_MODEL` (`whisper-1`).
+3. Deploy. O endereço padrão é `https://estudio-de-cards.vercel.app`; se for outro, troque em ⋮ → Configurações.
 
-1. vercel.com → Add New → Project → importe `ljhonatta/estudio-de-cards` (sem build, framework "Other").
-2. Settings → Environment Variables: `ANTHROPIC_API_KEY` (sua chave) e `APP_CODE` (um código que só você sabe).
-3. Deploy. O endereço fica `https://estudio-de-cards.vercel.app/api/claude` (se a Vercel der outro nome, troque em Ajustes).
+Rotas: `api/login` (e-mail e senha → token assinado), `api/ai` (frases, ideias e legendas), `api/transcribe` (fala do vídeo, WAV até ~2 min). Só aceitam pedidos do GitHub Pages e do localhost.
 
-O proxy só aceita pedidos do GitHub Pages e do localhost, com o código certo, e limita a resposta a 1600 tokens.
+Sem servidor no ar, o app ainda funciona: o login vira um acesso só do aparelho e dá para colar uma chave em ⋮ → Configurações → "Sem servidor".
+
+## O que a IA faz
+
+- **Fala do vídeo:** o áudio é convertido no aparelho para WAV 16 kHz e transcrito (Whisper). A transcrição entra nas ideias de frase e nas legendas.
+- **Legendas:** 3 opções por vídeo (Reflexão, História, Direta), com CTA para o perfil escolhido. Toque em 1, 2 ou 3 para trocar.
+- **Perfis:** ⋮ → Perfis. Cada perfil tem foto, nome, arroba, selo e um texto "sobre o perfil" que a IA usa. No passo 3 do editor você escolhe qual perfil vai no card.
 
 ## Estrutura
 
@@ -40,7 +48,7 @@ O proxy só aceita pedidos do GitHub Pages e do localhost, com o código certo, 
 src/app.html          página (fonte); __AVATAR__ é trocado pela foto
 src/avatar.jpg        foto padrão do card
 src/sw.template.js    service worker (offline + atualização)
-api/claude.js         proxy da IA (função da Vercel)
+api/                  servidor na Vercel: login, IA e transcrição
 build.py              gera index.html, sw.js e dist/artifact.html
 index.html            web app publicado (gerado)
 sw.js                 service worker publicado (gerado)
@@ -61,6 +69,6 @@ O service worker muda de versão a cada build, então o app instalado pega a atu
 
 ## Limites conhecidos
 
-- A fala do vídeo só é entendida quando há legenda escrita na tela ou quando você preenche "Do que o vídeo fala?". Transcrição de áudio (Whisper) é o próximo passo, num backend.
+- A transcrição da fala precisa de chave da OpenAI (no servidor ou no aparelho).
 - O áudio em alta do Instagram precisa ser adicionado no app do Instagram na hora de postar.
 - Exportação em tempo real: um vídeo de 15 s leva cerca de 15 s. Limite de 2 minutos por vídeo.
