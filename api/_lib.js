@@ -1,12 +1,17 @@
 // Funções comuns do servidor do Estúdio de Cards (arquivos com _ não viram rota na Vercel).
 const crypto = require("crypto");
 
+// Lê a variável com o nome em maiúsculas ou minúsculas (o painel da Vercel aceita os dois).
+function env(name) {
+  return process.env[name] ?? process.env[name.toLowerCase()] ?? "";
+}
+
 const DEFAULT_ORIGINS = ["https://ljhonatta.github.io", "http://localhost:8000", "http://127.0.0.1:8000"];
 const SESSION_DAYS = 30;
 
 function origins() {
-  const env = (process.env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
-  return env.length ? env : DEFAULT_ORIGINS;
+  const list = env("ALLOWED_ORIGINS").split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length ? list : DEFAULT_ORIGINS;
 }
 
 // CORS + método. Devolve true quando a resposta já foi enviada.
@@ -31,7 +36,7 @@ function fail(res, status, message) {
 }
 
 function secret() {
-  const s = process.env.SESSION_SECRET || "";
+  const s = env("SESSION_SECRET");
   if (s.length < 16) throw new Error("SESSION_SECRET ausente ou curto (mínimo 16 caracteres).");
   return s;
 }
@@ -67,4 +72,4 @@ function sameText(a, b) {
   return crypto.timingSafeEqual(h(a), h(b));
 }
 
-module.exports = { preflight, fail, makeToken, readToken, sameText };
+module.exports = { env, preflight, fail, makeToken, readToken, sameText };
