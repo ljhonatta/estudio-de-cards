@@ -2,8 +2,13 @@
 const crypto = require("crypto");
 
 // Lê a variável com o nome em maiúsculas ou minúsculas (o painel da Vercel aceita os dois).
+const ALIASES = { OPENAI_API_KEY: ["OPEN_API_KEY", "OPENAI_KEY"] };
 function env(name) {
-  return process.env[name] ?? process.env[name.toLowerCase()] ?? "";
+  for (const n of [name, ...(ALIASES[name] || [])]) {
+    const v = process.env[n] ?? process.env[n.toLowerCase()];
+    if (v) return v;
+  }
+  return "";
 }
 
 const DEFAULT_ORIGINS = ["https://ljhonatta.github.io", "http://localhost:8000", "http://127.0.0.1:8000"];
