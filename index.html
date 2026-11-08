@@ -223,9 +223,11 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       <section class="sec" id="autoSec" hidden>
         <h2>Modo automático · VPR Insta Full</h2>
         <div class="autoTop">
-          <button class="btn" id="autoBtn" type="button" aria-pressed="false">Ligar modo automático</button>
-          <span class="status" id="autoState"></span>
+          <button class="btn gold" id="scanBtn" type="button">Rastrear e editar agora</button>
+          <button class="btn" id="autoBtn" type="button" aria-pressed="false">Ligar modo contínuo</button>
         </div>
+        <label class="check"><input type="checkbox" id="hourly"> Rastrear sozinho a cada 1 hora (com o Estúdio aberto)</label>
+        <span class="status" id="autoState"></span>
         <div class="autoGrid">
           <div><small>Vídeo atual</small><b id="autoCur">—</b></div>
           <div><small>Etapa</small><b id="autoStep">Parado</b></div>
@@ -1418,7 +1420,15 @@ async function autoLoop(){
     let v=null;
     try{await refreshFila(sb);v=await claimNext(sb);}
     catch(e){setStep('Erro ao ler a fila',0);autoWarn(autoErro(e));await autoSleep(30000);continue;}
-    if(!v){setCur(null);setStep('Fila vazia · olho de novo em 30 s',0);await autoSleep(30000);continue;}
+    if(!v){
+      setCur(null);
+      if(auto.mode==='agora'){
+        if(!lsGet(HOURLY_KEY)){autoStop();setStep('Fila vazia: tudo editado',100);autoWarn('Rastreio concluído. Nada mais na fila para editar.');return;}
+        auto.mode='hora';autoUI();
+      }
+      const ms=auto.mode==='hora'?3600e3:30e3,prox=new Date(Date.now()+ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      setStep('Fila vazia · próximo rastreio às '+prox,0);await autoSleep(ms);continue;
+    }
     auto.busy=true;auto.cur=v;
     try{await autoProcess(sb,v);}
     catch(e){
@@ -1432,11 +1442,18 @@ async function autoLoop(){
 }
 function autoUI(){
   const b=$('autoBtn');b.setAttribute('aria-pressed',auto.on);
-  b.textContent=auto.on?'Modo automático LIGADO · tocar para desligar':'Ligar modo automático';
+  b.setAttribute('aria-pressed',auto.on&&auto.mode==='continuo');
+  b.textContent=auto.on&&auto.mode==='continuo'?'Contínuo LIGADO (30 s) · tocar para desligar':'Ligar modo contínuo';
+  $('scanBtn').textContent=auto.on?'Parar':'Rastrear e editar agora';
+  $('hourly').checked=!!lsGet(HOURLY_KEY);
   document.body.classList.toggle('autoRun',auto.on||auto.busy);
-  $('autoState').textContent=auto.on?(IS_IOS?'Tela acesa. No iPhone, deixe o app aberto e na frente.':'Tela acesa. Deixe esta aba visível enquanto roda.'):'';
+  const modo={continuo:'Modo contínuo: olha a fila a cada 30 s.',hora:'Rastreio de 1 em 1 hora ligado.',agora:'Editando tudo que está na fila.'}[auto.mode]||'';
+  $('autoState').textContent=auto.on?modo+' Tela acesa: '+(IS_IOS?'deixe o app aberto e na frente.':'deixe esta aba visível.'):(lsGet(HOURLY_KEY)?'Rastreio de 1 em 1 hora ligado (parado agora).':'');
 }
-async function autoStart(){
+const HOURLY_KEY='estudioCards.vpr.hora';
+async function autoStart(mode){
+  auto.mode=mode||'continuo';
+  if(auto.on){autoUI();if(autoWake)autoWake();return;} // já rodando: só troca o modo e acorda
   if(!await vprUser()){openDrawer('vpr');$('vprStatus').className='status warn';$('vprStatus').textContent='Conecte no VPR para ligar o modo automático.';return;}
   if(!sample)sample=await getAI();
   if(!sample){autoWarn('A IA está desligada: entre pelo servidor ou coloque uma chave em Configurações.');return;}
@@ -1449,7 +1466,22 @@ function autoStop(msg){
   auto.on=false;keepAwake(false);if(autoWake)autoWake();autoUI();
   if(msg)autoWarn(msg);else if(auto.busy)autoWarn('Desligando: termino o vídeo atual e paro.');
 }
-$('autoBtn').onclick=()=>auto.on?autoStop():autoStart();
+$('autoBtn').onclick=()=>auto.on&&auto.mode==='continuo'?autoStop():autoStart('continuo');
+$('scanBtn').onclick=()=>auto.on?autoStop():autoStart('agora');
+$('hourly').onchange=e=>{
+  lsSet(HOURLY_KEY,e.target.checked);
+  if(e.target.checked){if(!auto.on)autoStart('agora');else autoUI();} // rastreia já e depois de hora em hora
+  else if(auto.on&&auto.mode==='hora')autoStop();
+  else autoUI();
+};
+// rastreio de 1 em 1 hora continua depois de reabrir o Estúdio: começa no primeiro toque
+// (o navegador só deixa tocar o vídeo com som depois de um gesto)
+function resumeHourly(){
+  if(IN_VIEWER||!lsGet(HOURLY_KEY)||auto.on)return;
+  const go=()=>{if(!auto.on&&lsGet(HOURLY_KEY))autoStart('agora');};
+  if(navigator.userActivation&&navigator.userActivation.hasBeenActive)go();
+  else{autoWarn('Rastreio de 1 em 1 hora: toque em qualquer lugar da tela para retomar.');document.addEventListener('pointerdown',go,{once:true});}
+}
 
 /* revisão: trocar pela frase alternativa, re-renderizar e sobrescrever o mesmo número */
 async function openReview(id){
@@ -1513,7 +1545,7 @@ async function vprRefresh(){
   const c=vprCfg();$('autoSec').hidden=IN_VIEWER||!(c.url&&c.anon);
   if($('autoSec').hidden)return;
   const u=await vprUser();const st=$('vprStatus');
-  if(u){st.className='status ok';st.textContent='Conectado como '+u.email+'.';try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}}
+  if(u){st.className='status ok';st.textContent='Conectado como '+u.email+'.';try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}autoUI();resumeHourly();}
   else{st.className='status warn';st.textContent='Não conectado: preencha e toque em Conectar.';$('autoFila').textContent='—';}
 }
 $('vprLogin').onclick=async()=>{
