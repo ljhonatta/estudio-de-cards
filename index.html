@@ -537,10 +537,15 @@ function draw(){
   let y=top+headH+gap1+size;
   for(const l of lines){ctx.fillText(l,x0,y);y+=lh;}
   const by=top+headH+gap1+textH+gap2;
-  if(state.hasVideo&&state.scene&&vid.readyState>=2){
+  const vsrc=state.frameSrc||vid;
+  if(state.scene){ // recorte da cena (guardado para o render quadro a quadro)
     const t=state.scene,z=state.zoom,target=W/bh;
     let sw=t.w/z,sh=t.h/z; if(sw/sh>target)sw=sh*target; else sh=sw/target;
-    ctx.drawImage(vid,t.x+(t.w-sw)/2,t.y+(t.h-sh)*state.pos,sw,sh,0,by,W,bh);
+    state.layout={by,bh,sx:t.x+(t.w-sw)/2,sy:t.y+(t.h-sh)*state.pos,sw,sh};
+  }
+  if(state.hasVideo&&state.scene&&(state.frameSrc||vid.readyState>=2)){
+    const L=state.layout;
+    ctx.drawImage(vsrc,L.sx,L.sy,L.sw,L.sh,0,by,W,bh);
   }else{
     ctx.fillStyle='#141416';ctx.fillRect(0,by,W,bh);
     ctx.fillStyle='#55555c';ctx.textAlign='center';ctx.font='600 40px Montserrat, system-ui, sans-serif';
@@ -964,7 +969,7 @@ async function loadVideo(file,opts={}){
   if(!opts.noAI&&transcriber()){showTranscript({state:'loading'});
     state.trP=transcribe(file).then(r=>{if(state.loadSeq===seq){state.transcript=r.text||'';showTranscript(r);}return r;});}
   else{state.trP=null;showTranscript(null);}$('vidName').textContent=file.name;an.className='status';an.textContent='Carregando o vídeo…';
-  if(srcUrl)URL.revokeObjectURL(srcUrl);srcUrl=URL.createObjectURL(file);
+  state.srcFile=file;if(srcUrl)URL.revokeObjectURL(srcUrl);srcUrl=URL.createObjectURL(file);
   vid.muted=true;vid.loop=true;vid.src=srcUrl;vid.load();
   try{
     if(vid.readyState<1)await waitEvent('loadedmetadata',20000);
@@ -1013,10 +1018,127 @@ function pickMime(){
   return null;
 }
 function setStatus(t,cls){const s=$('status');s.textContent=t;s.className='status'+(cls?' '+cls:'');}
+/* ---------- render quadro a quadro (WebCodecs): 30 quadros/s fixos, sem perder quadro ---------- */
+// Decodifica o MP4 original quadro a quadro, desenha o card em cada um e codifica H.264 + AAC num MP4 com faststart.
+// Não depende de tocar em tempo real nem da aba estar na frente.
+const MP4BOX_JS='https://cdn.jsdelivr.net/npm/mp4box@0.5.2/dist/mp4box.all.min.js';
+const MUXER_JS='https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js';
+const OUT_FPS=30,AAC={codec:'mp4a.40.2',sampleRate:48000,numberOfChannels:2,bitrate:128000};
+const hasWebCodecs=()=>typeof VideoEncoder!=='undefined'&&typeof VideoDecoder!=='undefined'&&typeof VideoFrame!=='undefined'&&typeof EncodedVideoChunk!=='undefined';
+async function openMp4(file){
+  if(!file||!hasWebCodecs())return null;
+  try{
+    if($('keepAudio').checked&&(typeof AudioEncoder==='undefined'||!(await AudioEncoder.isConfigSupported(AAC)).supported))return null;
+    if(!window.MP4Box)await loadScript(MP4BOX_JS);
+    const buf=await file.arrayBuffer();buf.fileStart=0;
+    const mp=MP4Box.createFile();let info=null,err=null;const samples=[];
+    mp.onError=e=>{err=e;};
+    mp.onReady=i=>{info=i;const t=i.videoTracks[0];if(t){mp.setExtractionOptions(t.id,null,{nbSamples:1e9});mp.start();}};
+    mp.onSamples=(id,u,list)=>{for(const x of list)samples.push(x);};
+    mp.appendBuffer(buf);mp.flush();
+    const vt=info&&info.videoTracks[0];
+    if(err||!vt||!samples.length)return null;
+    let description;
+    for(const e of mp.getTrackById(vt.id).mdia.minf.stbl.stsd.entries){
+      const b=e.avcC||e.hvcC;if(!b)continue;
+      const DS=window.DataStream||MP4Box.DataStream,st=new DS(undefined,0,DS.BIG_ENDIAN);b.write(st);description=new Uint8Array(st.buffer,8);break;
+    }
+    const config={codec:vt.codec,codedWidth:vt.video.width,codedHeight:vt.video.height,description};
+    if(!(await VideoDecoder.isConfigSupported(config)).supported)return null;
+    const dur=samples.reduce((m,x)=>Math.max(m,(x.cts+x.duration)/x.timescale),0);
+    return {config,samples,dur,file,hasAudio:!!(info.audioTracks&&info.audioTracks.length)};
+  }catch(e){return null;}
+}
+async function renderFrames(src,opts){
+  if(!window.Mp4Muxer)await loadScript(MUXER_JS);
+  const fps=OUT_FPS,step=1e6/fps,total=Math.max(1,Math.round(src.dur*fps));
+  let pcm=null,nc=0;
+  if(opts.audio&&src.hasAudio){
+    const oac=new OfflineAudioContext(2,AAC.sampleRate,AAC.sampleRate),ab=await src.file.arrayBuffer();
+    try{pcm=await new Promise((res,rej)=>{const q=oac.decodeAudioData(ab,res,rej);if(q&&q.then)q.then(res,rej);});}
+    catch(e){throw new Error('não consegui ler o áudio do vídeo original');}
+    nc=Math.min(2,pcm.numberOfChannels);
+  }
+  const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),fastStart:'in-memory',firstTimestampBehavior:'offset',
+    video:{codec:'avc',width:W,height:H,frameRate:fps},audio:pcm?{codec:'aac',numberOfChannels:nc,sampleRate:pcm.sampleRate}:undefined});
+  let fail=null;
+  const enc=new VideoEncoder({output:(c,m)=>muxer.addVideoChunk(c,m),error:e=>{fail=e;}});
+  const vcfg={codec:'avc1.640028',width:W,height:H,bitrate:6e6,framerate:fps,avc:{format:'avc'}};
+  if(!(await VideoEncoder.isConfigSupported(vcfg)).supported)vcfg.codec='avc1.4d0028';
+  enc.configure(vcfg);
+  // fundo, perfil e frase são fixos: desenha uma vez e, por quadro, só cola a cena por cima
+  state.frameSrc=null;draw();
+  const layer=document.createElement('canvas');layer.width=W;layer.height=H;layer.getContext('2d').drawImage(cv,0,0);
+  const L=state.layout;
+  let k=0,prev=null,first=null;
+  const emit=()=>{ctx.drawImage(layer,0,0);ctx.drawImage(prev,L.sx,L.sy,L.sw,L.sh,0,L.by,W,L.bh);const vf=new VideoFrame(cv,{timestamp:Math.round(k*step),duration:Math.round(step)});enc.encode(vf,{keyFrame:k%(fps*2)===0});vf.close();k++;};
+  const dec=new VideoDecoder({output:f=>{
+      if(first===null)first=f.timestamp;
+      const rel=f.timestamp-first;
+      while(prev&&k<total&&k*step<rel)emit(); // quadros de saída antes deste usam o quadro anterior
+      if(prev)prev.close();prev=f;
+    },error:e=>{fail=e;}});
+  dec.configure(src.config);
+  const wait=(q,el)=>new Promise(r=>el.addEventListener('dequeue',r,{once:true}));
+  try{
+    for(let i=0;i<src.samples.length;i++){
+      if(fail)throw fail;
+      const x=src.samples[i];
+      dec.decode(new EncodedVideoChunk({type:x.is_sync?'key':'delta',timestamp:Math.round(x.cts*1e6/x.timescale),duration:Math.round(x.duration*1e6/x.timescale),data:x.data}));
+      while(dec.decodeQueueSize>4)await wait(0,dec);
+      while(enc.encodeQueueSize>4)await wait(0,enc);
+      if(i%10===0&&opts.onProgress)opts.onProgress(Math.min(.97,k/total));
+    }
+    await dec.flush();
+    while(prev&&k<total)emit();
+    await enc.flush();
+    if(fail)throw fail;
+  }finally{if(prev)prev.close();prev=null;state.frameSrc=null;try{dec.close();}catch(e){}try{enc.close();}catch(e){}}
+  if(pcm){ // áudio original → AAC, cortado na duração do vídeo
+    const aenc=new AudioEncoder({output:(c,m)=>muxer.addAudioChunk(c,m),error:e=>{fail=e;}});
+    aenc.configure({...AAC,sampleRate:pcm.sampleRate,numberOfChannels:nc});
+    const len=Math.min(pcm.length,Math.round(src.dur*pcm.sampleRate)),N=4096,ch=[...Array(nc)].map((_,c)=>pcm.getChannelData(c));
+    for(let i=0;i<len;i+=N){
+      const n=Math.min(N,len-i),data=new Float32Array(n*nc);for(let c=0;c<nc;c++)data.set(ch[c].subarray(i,i+n),c*n);
+      const ad=new AudioData({format:'f32-planar',sampleRate:pcm.sampleRate,numberOfFrames:n,numberOfChannels:nc,timestamp:Math.round(i*1e6/pcm.sampleRate),data});
+      aenc.encode(ad);ad.close();
+      while(aenc.encodeQueueSize>16)await new Promise(r=>aenc.addEventListener('dequeue',r,{once:true}));
+    }
+    await aenc.flush();try{aenc.close();}catch(e){}
+    if(fail)throw fail;
+  }
+  muxer.finalize();
+  if(opts.onProgress)opts.onProgress(1);
+  return new Blob([muxer.target.buffer],{type:'video/mp4'});
+}
+async function exportFrames(src,opts){
+  state.exporting=true;$('exportBtn').disabled=true;$('result').hidden=true;setStatus('Gerando quadro a quadro…');
+  vid.pause();
+  const phrase=$('txt').value.trim();
+  const capImgs=await captionImages();
+  const pf=curProf();
+  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
+  if(!opts.noCaption)job.capP=genCaption(job);
+  let blob;
+  try{blob=await renderFrames(src,{audio:$('keepAudio').checked,onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
+  catch(e){state.exporting=false;$('exportBtn').disabled=false;setStatus('Não consegui gerar o vídeo: '+((e&&e.message)||e),'warn');draw();return null;}
+  state.blob=blob;state.ext='mp4';
+  addOutput(blob,'mp4',job);$('bar').style.width='100%';
+  setStatus(`Pronto · MP4 · ${(blob.size/1048576).toFixed(1)} MB · ${OUT_FPS} quadros/s`,'ok');
+  state.exporting=false;$('exportBtn').disabled=false;draw();
+  if(!state.paused&&!opts.noPreview)vid.play().catch(()=>{});
+  return {blob,ext:'mp4',job};
+}
 // Gera o MP4 do card. Devolve {blob,ext,job} ou null (o motivo fica em #status).
 // opts.noCaption: não gera legenda (re-render na revisão); opts.onProgress(0..1).
 async function exportCard(opts={}){
   if(state.exporting||!state.hasVideo||state.analyzing)return null;
+  const src=await openMp4(state.srcFile);
+  if(src)return exportFrames(src,opts);
+  return exportLive(opts);
+}
+// reserva: grava em tempo real (navegador sem WebCodecs ou vídeo que não é MP4)
+async function exportLive(opts={}){
   if(!window.MediaRecorder||!cv.captureStream){setStatus('Este navegador não grava vídeo. Abra no Safari ou no Chrome atualizado.','warn');return null;}
   const mime=pickMime();if(!mime){setStatus('Nenhum formato de vídeo disponível neste navegador.','warn');return null;}
   state.exporting=true;$('exportBtn').disabled=true;$('result').hidden=true;setStatus('Gerando… mantenha esta tela aberta.');
@@ -1362,7 +1484,7 @@ async function baixarEntrada(sb,v){
 }
 // libera memória entre vídeos (no iPhone já houve crash em vídeo longo)
 function freeMemory(){
-  state.shots=[];state.mapFrame=null;state.hasVideo=false;state.transcript='';state.trP=null;state.pipeP=null;
+  state.shots=[];state.mapFrame=null;state.hasVideo=false;state.transcript='';state.trP=null;state.pipeP=null;state.srcFile=null;state.frameSrc=null;
   try{vid.pause();vid.removeAttribute('src');vid.load();}catch(e){}
   if(srcUrl){URL.revokeObjectURL(srcUrl);srcUrl=null;}
   map.width=map.height=1;$('mapBox').hidden=true;
