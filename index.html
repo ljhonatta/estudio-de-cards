@@ -1493,6 +1493,8 @@ function freeMemory(){
 function autoErro(e){return String((e&&e.message)||e||'erro desconhecido').slice(0,400);}
 async function autoProcess(sb,v){
   const N=v.numero;setCur(v);autoWarn('');
+  // tira um pronto antigo deste número: senão o VPR (que olha prontos/ a cada 30 s) marca "pronto" com o arquivo velho
+  try{await sb.storage.from(vprBucket()).remove([`prontos/video-${N}.mp4`,`prontos/legenda-${N}.txt`]);}catch(e){}
   setStep('Baixando o vídeo',8);
   const file=await baixarEntrada(sb,v);
   setStep('Analisando cena e texto',18);
