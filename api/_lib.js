@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const ALIASES = { OPENAI_API_KEY: ["OPEN_API_KEY", "OPENAI_KEY"] };
 function env(name) {
   for (const n of [name, ...(ALIASES[name] || [])]) {
-    const v = process.env[n] ?? process.env[n.toLowerCase()];
+    const v = String(process.env[n] ?? process.env[n.toLowerCase()] ?? "").trim(); // tira espaço/quebra de linha colados junto
     if (v) return v;
   }
   return "";

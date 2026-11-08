@@ -54,6 +54,7 @@ module.exports = async (req, res) => {
     }
     return fail(res, 500, "Servidor sem OPENAI_API_KEY nem ANTHROPIC_API_KEY.");
   } catch (e) {
+    console.error("ai:", e && e.name, e && e.cause && e.cause.code); // sem a mensagem: pode conter a chave
     return fail(res, 502, "Não conectou na IA.");
   }
 };
