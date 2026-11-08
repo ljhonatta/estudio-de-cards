@@ -1032,17 +1032,24 @@ async function exportCard(opts={}){
   const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
   if(!opts.noCaption)job.capP=genCaption(job);
   rec.start(250);
-  let raf;const tick=()=>{draw();const f=Math.min(1,vid.currentTime/vid.duration);$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);if(!vid.ended)raf=requestAnimationFrame(tick);};
+  // conta quadros e vigia a aba: em segundo plano o navegador para de desenhar e o vídeo sai congelado
+  let frames=0,sumiu=false;const onVis=()=>{if(document.hidden)sumiu=true;};document.addEventListener('visibilitychange',onVis);
+  let raf;const tick=()=>{frames++;draw();const f=Math.min(1,vid.currentTime/vid.duration);$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);if(!vid.ended)raf=requestAnimationFrame(tick);};
   // fim do vídeo, ou trava de segurança (duração + 30 s) se o navegador parar de tocar
   const ended=new Promise(r=>{vid.addEventListener('ended',()=>r(true),{once:true});setTimeout(()=>r(false),(vid.duration+30)*1000);});
   let played=true;try{await vid.play();}catch(e){played=false;}
   let ok=false;
   if(played){tick();ok=await ended;cancelAnimationFrame(raf);draw();}
+  document.removeEventListener('visibilitychange',onVis);
   if(!ok){try{rec.stop();}catch(e){}stream.getVideoTracks().forEach(t=>t.stop());vid.loop=true;vid.muted=true;state.exporting=false;$('exportBtn').disabled=false;
     setStatus(played?'O vídeo parou de tocar no meio. Deixe o Estúdio na tela e gere de novo.':'O navegador bloqueou a reprodução. Toque em Gerar de novo.','warn');return null;}
   await new Promise(r=>setTimeout(r,300));rec.stop();await done;
   stream.getVideoTracks().forEach(t=>t.stop());
   state.blob=new Blob(chunks,{type:mime.m.split(';')[0]});state.ext=mime.e;
+  if(sumiu||frames<Math.max(10,vid.duration*8)){
+    vid.loop=true;vid.muted=true;state.exporting=false;$('exportBtn').disabled=false;
+    setStatus('O render ficou incompleto: a aba saiu da tela no meio. Gere de novo com o Estúdio na frente.','warn');return null;
+  }
   addOutput(state.blob,mime.e,job);$('bar').style.width='100%';
   const mb=(state.blob.size/1048576).toFixed(1);
   setStatus(mime.e==='mp4'?`Pronto · MP4 · ${mb} MB`:`Pronto · WebM · ${mb} MB. Para MP4, gere pelo iPhone.`,mime.e==='mp4'?'ok':'warn');
@@ -1435,6 +1442,13 @@ async function autoLoop(){
     catch(e){
       const msg=autoErro(e);
       // IA fora do ar não é culpa do vídeo: devolve para a fila e espera (até 3 vezes no mesmo vídeo)
+      if(/ficou incompleto/.test(msg)){ // a aba saiu da tela: refaz o mesmo vídeo quando ela voltar
+        try{await sb.from('videos').update({status:'na_fila',erro_msg:null}).eq('id',v.id);}catch(_){}
+        auto.busy=false;auto.cur=null;freeMemory();
+        setStep('Pausado: deixe o Estúdio na frente',0);autoWarn('O video-'+v.numero+' voltou para a fila porque a aba saiu da tela no meio do render. Continua sozinho quando o Estúdio voltar para a frente.');
+        while(auto.on&&document.hidden)await autoSleep(3000);
+        continue;
+      }
       const ia=/^(Frases|Legenda):/.test(msg),n=(auto.iaFail[v.id]=(auto.iaFail[v.id]||0)+(ia?1:0));
       if(ia&&n<3){
         try{await sb.from('videos').update({status:'na_fila',erro_msg:null}).eq('id',v.id);}catch(_){}
