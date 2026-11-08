@@ -349,9 +349,9 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
     </section>
     <section class="drView" data-v="vpr" hidden>
       <p class="hint">Liga o Estúdio à fila do VPR Insta Full Postagens (mesmo Supabase). No modo automático o Estúdio pega os vídeos <b>na fila</b>, edita e devolve em <b>prontos/</b>. Tudo fica salvo só neste aparelho.</p>
-      <p class="hint">A URL e a chave anon estão no VPR: no Mac, abra <b>http://localhost:5056/config.js</b>.</p>
+      <p class="hint">A URL e a chave anon estão no VPR: no Mac, abra <b>http://localhost:5056/config.js</b>, copie <b>tudo</b> (Cmd+A, Cmd+C) e cole no campo da chave. O Estúdio separa a URL e a chave sozinho.</p>
       <label class="f">URL do Supabase<input type="url" id="vprUrl" spellcheck="false" placeholder="https://xxxx.supabase.co"></label>
-      <label class="f">Chave anon (pública)<input type="password" id="vprAnon" autocomplete="off" spellcheck="false"></label>
+      <label class="f">Chave anon (pública) ou o config.js inteiro<input type="password" id="vprAnon" autocomplete="off" spellcheck="false"></label>
       <label class="f">Bucket<input type="text" id="vprBucket" spellcheck="false" value="videos"></label>
       <label class="f">E-mail do VPR<input type="email" id="vprMail" autocomplete="username"></label>
       <label class="f">Senha do VPR<input type="password" id="vprPass" autocomplete="current-password"></label>
@@ -1528,8 +1528,16 @@ async function vprRefresh(){
 }
 $('vprLogin').onclick=async()=>{
   const st=$('vprStatus');
-  const c={url:$('vprUrl').value.trim().replace(/\/+$/,''),anon:$('vprAnon').value.trim(),bucket:$('vprBucket').value.trim()||'videos',email:$('vprMail').value.trim().toLowerCase()};
+  let url=$('vprUrl').value,anon=$('vprAnon').value;
+  // aceita o config.js do VPR colado inteiro em qualquer um dos dois campos
+  const cfgTxt=[anon,url].find(x=>/supabaseAnon/.test(x||''));
+  if(cfgTxt){const mu=/"supabaseUrl"\s*:\s*"([^"]+)"/.exec(cfgTxt),ma=/"supabaseAnon"\s*:\s*"([^"]+)"/.exec(cfgTxt);if(mu)url=mu[1];if(ma)anon=ma[1];}
+  url=url.trim().replace(/^["']|["']$/g,'').replace(/\/+$/,'');
+  anon=anon.replace(/\s+/g,'').replace(/^["']|["',;]+$/g,'').replace(/^["']/,'');
+  $('vprUrl').value=url;$('vprAnon').value=anon;
+  const c={url,anon,bucket:$('vprBucket').value.trim()||'videos',email:$('vprMail').value.trim().toLowerCase()};
   if(!/^https:\/\/.+/.test(c.url)||!c.anon){st.className='status warn';st.textContent='Preencha a URL (https://…) e a chave anon.';return;}
+  if(!/^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(c.anon)){st.className='status warn';st.textContent='A chave anon parece incompleta (ela começa com eyJ e tem três partes separadas por ponto). Cole o config.js inteiro no campo da chave.';return;}
   lsSet(VPR_KEY,c);st.className='status';st.textContent='Conectando…';
   try{
     const sb=await vprClient();
