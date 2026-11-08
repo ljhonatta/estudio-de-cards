@@ -57,6 +57,9 @@ module.exports = async (req, res) => {
     // só o tipo do erro (a mensagem pode conter a chave)
     const tipo = [e && e.name, e && e.cause && (e.cause.code || e.cause.name)].filter(Boolean).join(":");
     console.error("ai:", tipo, "node", process.version);
-    return fail(res, 502, `Não conectou na IA (${tipo || "erro"}).`);
+    // formato da chave (sem a chave): ajuda a achar caractere colado errado na Vercel
+    const k = env("OPENAI_API_KEY") || env("ANTHROPIC_API_KEY");
+    const forma = k ? `chave com ${k.length} caracteres, começa com "${k.slice(0, 3)}", ${[...k].filter((c) => !/[A-Za-z0-9_-]/.test(c)).length} caractere(s) fora do padrão` : "sem chave";
+    return fail(res, 502, `Não conectou na IA (${tipo || "erro"}; ${forma}).`);
   }
 };
