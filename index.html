@@ -237,6 +237,7 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <p class="hint" id="autoWarn"></p>
         <div class="hint">Últimos prontos e erros (toque num pronto para revisar a frase)</div>
         <div class="autoList" id="autoList"></div>
+        <button class="btn" id="retryErr" type="button">Devolver erros de edição para a fila</button>
         <div class="autoRev" id="autoRev" hidden></div>
       </section>
 
@@ -1295,7 +1296,7 @@ if(!IN_VIEWER&&'serviceWorker' in navigator&&(location.protocol==='https:'||loca
 const VPR_KEY='estudioCards.vpr',VPR_FRASES='estudioCards.vpr.frases';
 const SB_JS='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
 const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const auto={on:false,busy:false,cur:null,wake:null,wakeT:null,list:[],sb:null,sbKey:''};
+const auto={on:false,busy:false,cur:null,wake:null,wakeT:null,list:[],sb:null,sbKey:'',iaFail:{}};
 function vprCfg(){return lsGet(VPR_KEY)||{};}
 const vprBucket=()=>vprCfg().bucket||'videos';
 async function vprClient(){
@@ -1432,7 +1433,15 @@ async function autoLoop(){
     auto.busy=true;auto.cur=v;
     try{await autoProcess(sb,v);}
     catch(e){
-      const msg=autoErro(e);setStep('Erro no video-'+v.numero,0);autoWarn('video-'+v.numero+': '+msg);
+      const msg=autoErro(e);
+      // IA fora do ar não é culpa do vídeo: devolve para a fila e espera (até 3 vezes no mesmo vídeo)
+      const ia=/^(Frases|Legenda):/.test(msg),n=(auto.iaFail[v.id]=(auto.iaFail[v.id]||0)+(ia?1:0));
+      if(ia&&n<3){
+        try{await sb.from('videos').update({status:'na_fila',erro_msg:null}).eq('id',v.id);}catch(_){}
+        setStep('IA sem resposta · tento de novo em 5 min',0);autoWarn('A IA não respondeu no video-'+v.numero+' ('+msg+'). Ele voltou para a fila. Se repetir, confira em ⋮ → Configurações → Testar conexão.');
+        auto.busy=false;auto.cur=null;freeMemory();await autoSleep(5*60e3);continue;
+      }
+      setStep('Erro no video-'+v.numero,0);autoWarn('video-'+v.numero+': '+msg);
       try{await sb.from('videos').update({status:'erro',erro_msg:'Edição: '+msg}).eq('id',v.id);}catch(_){}
     }finally{auto.busy=false;auto.cur=null;freeMemory();}
     try{await refreshFila(sb);await renderAutoList(sb);}catch(e){}
@@ -1538,6 +1547,19 @@ async function reRender(v,frase,atual,alts,st){
     if(done){await openReview(v.id);const s2=$('autoRev').querySelector('.status');if(s2){s2.className='status ok';s2.textContent='video-'+v.numero+' re-renderizado com a frase nova.';}}
   }
 }
+
+// erros de edição (não de download nem de postagem) voltam para na_fila, como o "Tentar de novo" do VPR
+$('retryErr').onclick=async()=>{
+  const b=$('retryErr');b.disabled=true;
+  try{
+    const sb=await vprClient();
+    const {data,error}=await sb.from('videos').update({status:'na_fila',erro_msg:null}).eq('status','erro').like('erro_msg','Edição:%').not('arquivo_entrada','is',null).select('numero');
+    if(error)throw error;
+    autoWarn((data||[]).length?(data.length+' vídeo(s) voltaram para a fila: '+data.map(x=>'video-'+x.numero).join(', ')+'.'):'Nenhum erro de edição para devolver.');
+    await refreshFila(sb);await renderAutoList(sb);
+  }catch(e){autoWarn('Não consegui devolver: '+autoErro(e));}
+  finally{b.disabled=false;}
+};
 
 /* Conexão VPR (menu ⋮) */
 function vprFormFill(){const c=vprCfg();$('vprUrl').value=c.url||'';$('vprAnon').value=c.anon||'';$('vprBucket').value=c.bucket||'videos';$('vprMail').value=c.email||'';}
