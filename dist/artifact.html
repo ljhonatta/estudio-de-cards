@@ -795,8 +795,8 @@ async function readLocal(c,os,why){
   os.className='status';os.textContent=(why?why+' ':'')+'Lendo a frase no aparelho…';
   try{
     const fr=await localRead(c);
-    if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida no aparelho. Confira se ficou certinha.'+(sample&&sampleOk?' Veja as sugestões abaixo.':'');
-      if(sample&&sampleOk){$('readBtn').disabled=!state.hasVideo;return await genSuggestions(fr);}}
+    if(fr){$('txt').value=fr;$('sugg').hidden=true;lastOrig=fr;os.className='status ok';os.textContent='Frase original copiada do vídeo (lida no aparelho). Confira se ficou certinha.';
+      return {list:[{texto:fr}],best:0};}
     else{os.className='status warn';os.textContent='Não achei frase nessa área. Marque a área do texto no mapa ou digite a frase.';}
   }catch(e){os.className='status warn';os.textContent='Não consegui ler a frase. Digite a frase.'+OFF_HINT;}
   finally{$('readBtn').disabled=!state.hasVideo;}
@@ -823,8 +823,9 @@ async function readText(){
       {images:blob,modelTier:'quick',signal:readCtl.signal});
     const fr=out&&typeof out.frase==='string'?out.frase.trim():'';
     $('readBtn').disabled=!state.hasVideo;
-    if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida. Veja as sugestões abaixo.';return await genSuggestions(fr);}
-    os.className='status';os.textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';return await genSuggestions('');
+    // o card usa exatamente a frase do vídeo original, sem sugestões
+    if(fr){$('txt').value=fr;$('sugg').hidden=true;lastOrig=fr;os.className='status ok';os.textContent='Frase original copiada do vídeo.';return {list:[{texto:fr}],best:0};}
+    os.className='status';os.textContent='Esse vídeo não tem frase. Criando uma a partir da cena…';return await genSuggestions('');
   }catch(e){
     const code=e&&e.code;
     if(code==='cancelled'){$('readBtn').disabled=!state.hasVideo;return null;}
@@ -926,7 +927,7 @@ async function genSuggestions(orig){
   }
 }
 $('moreSug').onclick=()=>genSuggestions(lastOrig);
-$('ctxIn').addEventListener('change',()=>{if(state.hasVideo&&$('ctxIn').value.trim()){delete $('txt').dataset.touched;genSuggestions(lastOrig);}});
+$('ctxIn').addEventListener('change',()=>{if(state.hasVideo&&!lastOrig&&$('ctxIn').value.trim()){delete $('txt').dataset.touched;genSuggestions(lastOrig);}});
 $('txt').addEventListener('input',e=>{e.target.dataset.touched='1';});
 
 /* ---------- carregar vídeo ---------- */
@@ -936,7 +937,7 @@ async function loadVideo(file,opts={}){
   const an=$('anStatus');
   state.hasVideo=false;state.scene=null;state.text=null;state.mapFrame=null;$('mapBox').hidden=true;
   $('exportBtn').disabled=true;$('readBtn').disabled=true;$('playBtn').disabled=true;
-  delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';
+  delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';lastOrig='';
   const seq=state.loadSeq=(state.loadSeq||0)+1;state.transcript='';
   if(!opts.noAI&&transcriber()){showTranscript({state:'loading'});
     state.trP=transcribe(file).then(r=>{if(state.loadSeq===seq){state.transcript=r.text||'';showTranscript(r);}return r;});}
@@ -1355,7 +1356,7 @@ async function autoProcess(sb,v){
   delete $('txt').dataset.touched;
   if(!await loadVideo(file))throw new Error($('anStatus').textContent||'Não consegui abrir o vídeo.');
   if(IS_IOS&&vid.duration>90)autoWarn(`video-${N} tem ${Math.round(vid.duration)} s: no iPhone, vídeos acima de 90 s podem travar. Se travar, rode o modo automático no Mac.`);
-  setStep('Entendendo o vídeo e criando frases',30);
+  setStep('Copiando a frase do vídeo',30);
   const r=await state.pipeP;
   if(!r||!r.list||!r.list.length)throw new Error('Frases: '+($('sugStatus').textContent||'a IA não respondeu'));
   const best=r.list[r.best]||r.list[0],alts=r.list.filter(x=>x!==best).map(x=>x.texto);
