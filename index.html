@@ -1555,7 +1555,8 @@ $('vprLogin').onclick=async()=>{
   const cfgTxt=[anon,url].find(x=>/supabaseAnon/.test(x||''));
   if(cfgTxt){const mu=/"supabaseUrl"\s*:\s*"([^"]+)"/.exec(cfgTxt),ma=/"supabaseAnon"\s*:\s*"([^"]+)"/.exec(cfgTxt);if(mu)url=mu[1];if(ma)anon=ma[1];}
   url=url.trim().replace(/^["']|["']$/g,'').replace(/\/+$/,'');
-  anon=anon.replace(/\s+/g,'').replace(/^["']|["',;]+$/g,'').replace(/^["']/,'');
+  // pega só a chave (JWT eyJ….….…) de qualquer texto colado junto
+  const jwt=/eyJ[\w-]+\.[\w-]+\.[\w-]+/.exec(anon.replace(/\s+/g,''));anon=jwt?jwt[0]:anon.trim();
   $('vprUrl').value=url;$('vprAnon').value=anon;
   const c={url,anon,bucket:$('vprBucket').value.trim()||'videos',email:$('vprMail').value.trim().toLowerCase()};
   if(!/^https:\/\/.+/.test(c.url)||!c.anon){st.className='status warn';st.textContent='Preencha a URL (https://…) e a chave anon.';return;}
