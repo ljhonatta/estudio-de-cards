@@ -140,6 +140,20 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .capOpts{display:flex;gap:6px;flex-wrap:wrap}
 .capOpts button{flex:1 1 90px;appearance:none;border:1px solid var(--line);background:var(--field);color:var(--muted);border-radius:10px;padding:8px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .capOpts button[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
+/* modo automático (VPR) */
+.autoTop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.autoGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.autoGrid div{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;min-width:0}
+.autoGrid small{font-size:11.5px;color:var(--muted)}
+.autoGrid b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.autoList{display:flex;flex-direction:column;gap:6px}
+.autoItem{appearance:none;display:flex;gap:10px;align-items:baseline;text-align:left;width:100%;background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
+.autoItem b{flex:none;font-variant-numeric:tabular-nums}
+.autoItem span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.autoItem.err b{color:var(--warn)}
+.autoRev{display:flex;flex-direction:column;gap:8px;border:1px solid var(--gold);border-radius:12px;padding:12px}
+body.autoRun .manual{pointer-events:none;opacity:.55}
+#autoBtn[aria-pressed=true]{background:#18241c;color:var(--green);border-color:var(--green)}
 .trBox{font-size:13px}
 .trBox p{white-space:pre-line;margin:8px 0 0}
 /* tela de acesso */
@@ -184,7 +198,25 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     </div>
 
     <div class="panel">
-      <section class="sec">
+      <section class="sec" id="autoSec" hidden>
+        <h2>Modo automático · VPR Insta Full</h2>
+        <div class="autoTop">
+          <button class="btn" id="autoBtn" type="button" aria-pressed="false">Ligar modo automático</button>
+          <span class="status" id="autoState"></span>
+        </div>
+        <div class="autoGrid">
+          <div><small>Vídeo atual</small><b id="autoCur">—</b></div>
+          <div><small>Etapa</small><b id="autoStep">Parado</b></div>
+          <div><small>Na fila</small><b id="autoFila">—</b></div>
+        </div>
+        <div class="prog" aria-hidden="true"><i id="autoBar"></i></div>
+        <p class="hint" id="autoWarn"></p>
+        <div class="hint">Últimos prontos e erros (toque num pronto para revisar a frase)</div>
+        <div class="autoList" id="autoList"></div>
+        <div class="autoRev" id="autoRev" hidden></div>
+      </section>
+
+      <section class="sec manual">
         <h2>1 · Vídeo de referência</h2>
         <div class="file">
           <input type="file" id="vidIn" accept="video/*" hidden>
@@ -217,7 +249,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <label class="check"><input type="checkbox" id="keepAudio" checked> Manter o áudio original no arquivo</label>
       </section>
 
-      <section class="sec">
+      <section class="sec manual">
         <h2>2 · Frase</h2>
         <div class="file">
           <button class="btn" id="readBtn" type="button" disabled>Ler texto do vídeo</button>
@@ -253,7 +285,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         </details>
       </section>
 
-      <section class="sec">
+      <section class="sec manual">
         <h2>3 · Perfil</h2>
         <label class="f">Perfil que vai no card e na legenda<select id="profSel"></select></label>
         <div class="file">
@@ -263,7 +295,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <p class="hint" id="defStatus">O perfil escolhido fica lembrado. O botão salva tamanho da letra, alinhamento e formato neste aparelho.</p>
       </section>
 
-      <section class="sec">
+      <section class="sec manual">
         <h2>4 · Exportar</h2>
         <button class="btn gold big" id="exportBtn" type="button" disabled>Gerar vídeo final</button>
         <div class="prog" aria-hidden="true"><i id="bar"></i></div>
@@ -290,6 +322,7 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
     <nav class="navList" id="drMenu">
       <button class="navItem" type="button" data-view="leg">Legendas geradas<small>As últimas 50, para copiar de novo</small></button>
       <button class="navItem" type="button" data-view="perfis">Perfis<small>Foto, nome, arroba e o jeito de escrever de cada perfil</small></button>
+      <button class="navItem" type="button" data-view="vpr" id="navVpr">Conexão VPR<small>Fila do VPR Insta Full e modo automático</small></button>
       <button class="navItem" type="button" data-view="cfg" id="navCfg">Configurações do web app<small>Chave da IA, modelos e instalação</small></button>
       <button class="navItem" type="button" data-view="conta" id="navConta">Conta<small id="contaMail">Acesso deste aparelho</small></button>
     </nav>
@@ -311,6 +344,17 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
         <div class="file"><button class="btn gold" type="submit">Salvar perfil</button><button class="btn" type="button" id="pfCancel">Cancelar</button></div>
       </form>
       <div class="status" id="profStatus"></div>
+    </section>
+    <section class="drView" data-v="vpr" hidden>
+      <p class="hint">Liga o Estúdio à fila do VPR Insta Full Postagens (mesmo Supabase). No modo automático o Estúdio pega os vídeos <b>na fila</b>, edita e devolve em <b>prontos/</b>. Tudo fica salvo só neste aparelho.</p>
+      <p class="hint">A URL e a chave anon estão no VPR: no Mac, abra <b>http://localhost:5056/config.js</b>.</p>
+      <label class="f">URL do Supabase<input type="url" id="vprUrl" spellcheck="false" placeholder="https://xxxx.supabase.co"></label>
+      <label class="f">Chave anon (pública)<input type="password" id="vprAnon" autocomplete="off" spellcheck="false"></label>
+      <label class="f">Bucket<input type="text" id="vprBucket" spellcheck="false" value="videos"></label>
+      <label class="f">E-mail do VPR<input type="email" id="vprMail" autocomplete="username"></label>
+      <label class="f">Senha do VPR<input type="password" id="vprPass" autocomplete="current-password"></label>
+      <div class="file"><button class="btn gold" id="vprLogin" type="button">Conectar</button><button class="btn" id="vprLogout" type="button">Desconectar</button></div>
+      <div class="status" id="vprStatus"></div>
     </section>
     <section class="drView" data-v="cfg" id="cfgSec" hidden>
         <p class="hint">Tudo aqui fica salvo neste aparelho, mesmo fechando o app. Salva sozinho quando você muda um campo.</p>
@@ -749,14 +793,15 @@ async function readLocal(c,os,why){
   try{
     const fr=await localRead(c);
     if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida no aparelho. Confira se ficou certinha.'+(sample&&sampleOk?' Veja as sugestões abaixo.':'');
-      if(sample&&sampleOk)genSuggestions(fr);}
+      if(sample&&sampleOk){$('readBtn').disabled=!state.hasVideo;return await genSuggestions(fr);}}
     else{os.className='status warn';os.textContent='Não achei frase nessa área. Marque a área do texto no mapa ou digite a frase.';}
   }catch(e){os.className='status warn';os.textContent='Não consegui ler a frase. Digite a frase.'+OFF_HINT;}
   finally{$('readBtn').disabled=!state.hasVideo;}
+  return null;
 }
 async function readText(){
   const os=$('ocrStatus');
-  if(!state.text||!state.mapFrame){os.className='status warn';os.textContent='Marque a área do texto no mapa primeiro.';return;}
+  if(!state.text||!state.mapFrame){os.className='status warn';os.textContent='Marque a área do texto no mapa primeiro.';return null;}
   const f=state.mapFrame,s=f.width/vid.videoWidth,t=state.text;
   const c=document.createElement('canvas');c.width=Math.max(1,Math.round(t.w*s));c.height=Math.max(1,Math.round(t.h*s));
   c.getContext('2d').drawImage(f,t.x*s,t.y*s,t.w*s,t.h*s,0,0,c.width,c.height);
@@ -774,17 +819,17 @@ async function readText(){
       'Se não houver frase, use string vazia. Responda só com JSON no formato {"frase":"..."}.',
       {images:blob,modelTier:'quick',signal:readCtl.signal});
     const fr=out&&typeof out.frase==='string'?out.frase.trim():'';
-    if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida. Veja as sugestões abaixo.';genSuggestions(fr);}
-    else{os.className='status';os.textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';genSuggestions('');}
+    $('readBtn').disabled=!state.hasVideo;
+    if(fr){$('txt').value=fr;os.className='status ok';os.textContent='Frase lida. Veja as sugestões abaixo.';return await genSuggestions(fr);}
+    os.className='status';os.textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';return await genSuggestions('');
   }catch(e){
     const code=e&&e.code;
-    if(code==='cancelled'){$('readBtn').disabled=!state.hasVideo;return;}
+    if(code==='cancelled'){$('readBtn').disabled=!state.hasVideo;return null;}
     let why='A IA não respondeu.';
     if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed','images_unavailable'].includes(code)){sampleOk=false;why=IN_VIEWER?'A leitura com IA não foi liberada.':'A IA recusou o acesso (confira o código em Ajustes).';}
     else if(code==='rate_limited')why='A IA está no limite agora.';
     return readLocal(c,os,why);
   }
-  $('readBtn').disabled=!state.hasVideo;
 }
 $('readBtn').onclick=readText;
 
@@ -841,7 +886,7 @@ async function genSuggestions(orig){
   $('sugTitle').textContent=noText?'Ideias de frase para esse vídeo (toque para usar)':'Sugestões para conectar mais com o público (toque para usar)';
   renderSugg(orig,[]);
   if(!sample)sample=await getAI();
-  if(!sample||!sampleOk){st.className='status warn';st.textContent=(noText?'Ideias automáticas indisponíveis aqui. Use o Banco de frases.':'Sugestões indisponíveis aqui.')+OFF_HINT;return;}
+  if(!sample||!sampleOk){st.className='status warn';st.textContent=(noText?'Ideias automáticas indisponíveis aqui. Use o Banco de frases.':'Sugestões indisponíveis aqui.')+OFF_HINT;return null;}
   sugCtl?.abort();sugCtl=new AbortController();
   st.className='status';st.textContent=noText?'Assistindo o vídeo e criando ideias…':'Criando sugestões…';
   let imgs=[];
@@ -853,8 +898,9 @@ async function genSuggestions(orig){
     :'Frase original tirada do vídeo: "'+orig.replace(/"/g,"'")+'"\n'+cena+'Analise a frase e a cena. Crie 3 versões melhores, com o mesmo sentido e a mesma linha, mas que façam a pessoa sentir que estamos falando dela. '+
      'Ângulos: (1) identificação pessoal na voz de quem assiste ("Eu quando…", "Você quando…", "POV:"), (2) mais emocional ou provocativa, com contraste, (3) convite para marcar ou enviar para alguém ("Marca aquele amigo que…", "Manda pra quem…").\n';
   try{
-    const out=await sample.json(voz()+'\n'+pedido+'Para cada frase, diga em até 12 palavras por que ela conecta.\n'+
-      'Responda só com JSON: {"contexto":"do que o vídeo fala e a mensagem principal, em uma linha","sugestoes":[{"texto":"...","porque":"..."}]}',
+    const out=await sample.json(voz()+'\n'+pedido+'Para cada frase, diga em até 12 palavras por que ela conecta. '+
+      'Depois escolha a MAIS FORTE das 3: a que tem mais potencial de a pessoa enviar para alguém ou marcar um amigo ("melhor": índice 0, 1 ou 2).\n'+
+      'Responda só com JSON: {"contexto":"do que o vídeo fala e a mensagem principal, em uma linha","sugestoes":[{"texto":"...","porque":"..."}],"melhor":0}',
       {images:imgs.length?imgs:undefined,signal:sugCtl.signal,cache:false});
     const list=(Array.isArray(out?.sugestoes)?out.sugestoes:[]).filter(s=>s&&typeof s.texto==='string'&&s.texto.trim()).slice(0,3).map(s=>({texto:s.texto.trim(),porque:String(s.porque||'').trim()}));
     if(!list.length)throw {code:'empty_completion'};
@@ -862,15 +908,18 @@ async function genSuggestions(orig){
     const ctx=typeof out?.contexto==='string'?out.contexto.trim():'';
     state.videoCtx=ctx;
     if(ctx){const p=$('sugCtx');p.textContent='';const b=document.createElement('b');b.textContent='Leitura do vídeo: ';p.append(b,ctx);p.hidden=false;}
-    if(noText&&!$('txt').dataset.touched){$('txt').value=list[0].texto;$('sugList').querySelectorAll('.sug')[0]?.setAttribute('aria-pressed','true');}
-    st.className='status ok';st.textContent=noText?'A ideia 1 já foi para o card. Toque em outra para trocar.':'Escolha a que mais combina com você.';
+    const best=Number.isInteger(out?.melhor)&&list[out.melhor]?out.melhor:0;
+    if(noText&&!$('txt').dataset.touched){$('txt').value=list[best].texto;$('sugList').querySelectorAll('.sug')[best]?.setAttribute('aria-pressed','true');}
+    st.className='status ok';st.textContent=noText?'A ideia '+(best+1)+' (a mais forte) já foi para o card. Toque em outra para trocar.':'A IA acha a '+(best+1)+' a mais forte. Escolha a que mais combina com você.';
     $('moreSug').hidden=false;
     if(noText){$('ocrStatus').className='status ok';$('ocrStatus').textContent='Sem frase no vídeo: ideias criadas a partir do vídeo inteiro.';}
+    return {list,best};
   }catch(e){
-    if(e&&e.code==='cancelled')return;
+    if(e&&e.code==='cancelled')return null;
     if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e&&e.code))sampleOk=false;
     st.className='status warn';st.textContent=e&&e.code==='rate_limited'?'Muitos pedidos seguidos. Espere um pouco e toque em Gerar outras 3.':'Não consegui criar agora. Toque em Gerar outras 3.';
     $('moreSug').hidden=!sampleOk;
+    return null;
   }
 }
 $('moreSug').onclick=()=>genSuggestions(lastOrig);
@@ -879,14 +928,14 @@ $('txt').addEventListener('input',e=>{e.target.dataset.touched='1';});
 
 /* ---------- carregar vídeo ---------- */
 let srcUrl=null;
-async function loadVideo(file){
-  if(!file)return;
+async function loadVideo(file,opts={}){
+  if(!file)return false;state.pipeP=null;
   const an=$('anStatus');
   state.hasVideo=false;state.scene=null;state.text=null;state.mapFrame=null;$('mapBox').hidden=true;
   $('exportBtn').disabled=true;$('readBtn').disabled=true;$('playBtn').disabled=true;
   delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';
   const seq=state.loadSeq=(state.loadSeq||0)+1;state.transcript='';
-  if(transcriber()){showTranscript({state:'loading'});
+  if(!opts.noAI&&transcriber()){showTranscript({state:'loading'});
     state.trP=transcribe(file).then(r=>{if(state.loadSeq===seq){state.transcript=r.text||'';showTranscript(r);}return r;});}
   else{state.trP=null;showTranscript(null);}$('vidName').textContent=file.name;an.className='status';an.textContent='Carregando o vídeo…';
   if(srcUrl)URL.revokeObjectURL(srcUrl);srcUrl=URL.createObjectURL(file);
@@ -895,24 +944,26 @@ async function loadVideo(file){
     if(vid.readyState<1)await waitEvent('loadedmetadata',20000);
     // WebM gravado no navegador/Android chega sem duração: pular para o fim força o cálculo
     if(!isFinite(vid.duration)){const d=waitEvent('durationchange',5000).catch(()=>{});vid.currentTime=1e7;await d;vid.currentTime=0;}
-    if(vid.duration>130){an.className='status warn';an.textContent=`Esse vídeo tem ${Math.round(vid.duration)} s. O limite é 2 minutos: corte antes de subir.`;return;}
+    if(vid.duration>130){an.className='status warn';an.textContent=`Esse vídeo tem ${Math.round(vid.duration)} s. O limite é 2 minutos: corte antes de subir.`;return false;}
     try{await vid.play();}catch(e){}
     if(vid.readyState<2)await waitEvent('loadeddata canplay',20000);
     vid.pause();
   }catch(e){
     an.className='status warn';
     an.textContent='Não consegui abrir esse vídeo. Tente outro arquivo ou grave a tela e suba de novo.';
-    return;
+    return false;
   }
-  if(!vid.videoWidth){an.className='status warn';an.textContent='O vídeo abriu sem imagem. Tente exportar da galeria de novo e suba outra vez.';return;}
+  if(!vid.videoWidth){an.className='status warn';an.textContent='O vídeo abriu sem imagem. Tente exportar da galeria de novo e suba outra vez.';return false;}
   state.hasVideo=true;$('dropHint').hidden=true;
   try{await analyze();}
   catch(e){state.analyzing=false;state.scene={x:0,y:0,w:vid.videoWidth,h:vid.videoHeight};state.text=null;
     an.className='status warn';an.textContent='Não consegui separar cena e texto. Usei o vídeo inteiro: ajuste a cena no mapa ou com o zoom.';}
   $('exportBtn').disabled=false;$('playBtn').disabled=false;$('readBtn').disabled=false;
   $('meta').textContent=`1080 × 1920 · ${Math.round(vid.duration)} s · origem ${vid.videoWidth}×${vid.videoHeight}`;
-  if(state.text)readText();
-  else{$('ocrStatus').className='status';$('ocrStatus').textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';genSuggestions('');}
+  if(opts.noAI)state.pipeP=Promise.resolve(null);
+  else if(state.text)state.pipeP=readText();
+  else{$('ocrStatus').className='status';$('ocrStatus').textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';state.pipeP=genSuggestions('');}
+  return true;
 }
 $('pickVid').onclick=()=>$('vidIn').click();
 $('vidIn').onchange=e=>{loadVideo(e.target.files[0]);e.target.value='';};
@@ -936,10 +987,12 @@ function pickMime(){
   return null;
 }
 function setStatus(t,cls){const s=$('status');s.textContent=t;s.className='status'+(cls?' '+cls:'');}
-$('exportBtn').onclick=async()=>{
-  if(state.exporting||!state.hasVideo||state.analyzing)return;
-  if(!window.MediaRecorder||!cv.captureStream){setStatus('Este navegador não grava vídeo. Abra no Safari ou no Chrome atualizado.','warn');return;}
-  const mime=pickMime();if(!mime){setStatus('Nenhum formato de vídeo disponível neste navegador.','warn');return;}
+// Gera o MP4 do card. Devolve {blob,ext,job} ou null (o motivo fica em #status).
+// opts.noCaption: não gera legenda (re-render na revisão); opts.onProgress(0..1).
+async function exportCard(opts={}){
+  if(state.exporting||!state.hasVideo||state.analyzing)return null;
+  if(!window.MediaRecorder||!cv.captureStream){setStatus('Este navegador não grava vídeo. Abra no Safari ou no Chrome atualizado.','warn');return null;}
+  const mime=pickMime();if(!mime){setStatus('Nenhum formato de vídeo disponível neste navegador.','warn');return null;}
   state.exporting=true;$('exportBtn').disabled=true;$('result').hidden=true;setStatus('Gerando… mantenha esta tela aberta.');
   const stream=cv.captureStream(30);
   if($('keepAudio').checked&&setupAudio()){try{await audioCtx.resume();audioDest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));}catch(e){}}
@@ -951,22 +1004,28 @@ $('exportBtn').onclick=async()=>{
   const phrase=$('txt').value.trim();
   const capImgs=await captionImages();
   const pf=curProf();
-  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:'loading',capMsg:''};
-  genCaption(job);
+  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
+  if(!opts.noCaption)job.capP=genCaption(job);
   rec.start(250);
-  let raf;const tick=()=>{draw();$('bar').style.width=Math.min(100,(vid.currentTime/vid.duration)*100)+'%';if(!vid.ended)raf=requestAnimationFrame(tick);};
-  const ended=new Promise(r=>vid.addEventListener('ended',r,{once:true}));
-  try{await vid.play();}catch(e){setStatus('O navegador bloqueou a reprodução. Toque em Gerar de novo.','warn');}
-  tick();await ended;cancelAnimationFrame(raf);draw();
+  let raf;const tick=()=>{draw();const f=Math.min(1,vid.currentTime/vid.duration);$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);if(!vid.ended)raf=requestAnimationFrame(tick);};
+  // fim do vídeo, ou trava de segurança (duração + 30 s) se o navegador parar de tocar
+  const ended=new Promise(r=>{vid.addEventListener('ended',()=>r(true),{once:true});setTimeout(()=>r(false),(vid.duration+30)*1000);});
+  let played=true;try{await vid.play();}catch(e){played=false;}
+  let ok=false;
+  if(played){tick();ok=await ended;cancelAnimationFrame(raf);draw();}
+  if(!ok){try{rec.stop();}catch(e){}stream.getVideoTracks().forEach(t=>t.stop());vid.loop=true;vid.muted=true;state.exporting=false;$('exportBtn').disabled=false;
+    setStatus(played?'O vídeo parou de tocar no meio. Deixe o Estúdio na tela e gere de novo.':'O navegador bloqueou a reprodução. Toque em Gerar de novo.','warn');return null;}
   await new Promise(r=>setTimeout(r,300));rec.stop();await done;
   stream.getVideoTracks().forEach(t=>t.stop());
   state.blob=new Blob(chunks,{type:mime.m.split(';')[0]});state.ext=mime.e;
   addOutput(state.blob,mime.e,job);$('bar').style.width='100%';
   const mb=(state.blob.size/1048576).toFixed(1);
   setStatus(mime.e==='mp4'?`Pronto · MP4 · ${mb} MB`:`Pronto · WebM · ${mb} MB. Para MP4, gere pelo iPhone.`,mime.e==='mp4'?'ok':'warn');
-  vid.loop=true;vid.muted=true;await seekTo(0);if(!state.paused)vid.play().catch(()=>{});
+  vid.loop=true;vid.muted=true;await seekTo(0);if(!state.paused&&!opts.noPreview)vid.play().catch(()=>{});
   state.exporting=false;$('exportBtn').disabled=false;
-};
+  return {blob:state.blob,ext:mime.e,job};
+}
+$('exportBtn').onclick=()=>exportCard();
 /* ---------- legenda com o Claude ---------- */
 async function captionImages(){
   let imgs=[];
@@ -1000,7 +1059,8 @@ async function genCaption(job){
     'CTA final em duas partes (primeiro convide a marcar ou enviar para alguém que precisa ver isso; depois convide a seguir '+handle+', acompanhar os próximos vídeos e ver os stories); '+
     'no máximo 3 emojis; as legendas 1 e 2 entre 450 e 900 caracteres. Pode haver uma referência leve de fé quando combinar com o tema e com o perfil.\n'+
     'Para cada legenda, exatamente 3 hashtags em português ligadas ao conteúdo (sem #, sem espaço dentro).\n\n'+
-    'Responda só com JSON: {"legendas":[{"angulo":"Reflexão","legenda":"texto com \\n entre parágrafos","hashtags":["a","b","c"]},{"angulo":"História",...},{"angulo":"Direta",...}]}';
+    'Por fim, escolha a legenda mais forte das 3 para esse vídeo ("melhor": índice 0, 1 ou 2).\n\n'+
+    'Responda só com JSON: {"legendas":[{"angulo":"Reflexão","legenda":"texto com \\n entre parágrafos","hashtags":["a","b","c"]},{"angulo":"História",...},{"angulo":"Direta",...}],"melhor":0}';
   capRunning++;
   try{
     const out=await sample.json(prompt,{images:imgs.length?imgs:undefined,cache:false});
@@ -1011,7 +1071,8 @@ async function genCaption(job){
       return leg?{label:String(x.angulo||'Opção '+(i+1)).trim().slice(0,20),text:leg+(tags.length?'\n\n'+tags.join(' '):'')}:null;
     }).filter(Boolean).slice(0,3);
     if(!caps.length)throw {code:'empty_completion'};
-    job.captions=caps;job.capSel=0;job.caption=caps[0].text;job.capState='ok';
+    const best=Number.isInteger(out?.melhor)&&caps[out.melhor]?out.melhor:0;
+    job.captions=caps;job.capSel=best;job.caption=caps[best].text;job.capState='ok';
   }catch(e){
     const c=e&&e.code;job.capState='err';
     if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(c)){sampleOk=false;job.capMsg=IN_VIEWER?'A legenda automática não foi liberada. Escreva a sua no campo acima.':'A IA recusou o acesso. Confira em Configurações.';}
@@ -1204,8 +1265,257 @@ if(!IN_VIEWER&&'serviceWorker' in navigator&&(location.protocol==='https:'||loca
   window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
 }
 
+/* ---------- modo automático: fila do VPR Insta Full Postagens (Supabase) ---------- */
+// Contrato do VPR: tabela videos (numero, status, autor_origem, legenda, frases_alternativas, erro_msg…),
+// bucket videos com entrada/video-N.mp4 → prontos/video-N.mp4 + prontos/legenda-N.txt.
+const VPR_KEY='estudioCards.vpr',VPR_FRASES='estudioCards.vpr.frases';
+const SB_JS='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const auto={on:false,busy:false,cur:null,wake:null,wakeT:null,list:[],sb:null,sbKey:''};
+function vprCfg(){return lsGet(VPR_KEY)||{};}
+const vprBucket=()=>vprCfg().bucket||'videos';
+async function vprClient(){
+  const c=vprCfg();if(!c.url||!c.anon)throw new Error('Preencha a Conexão VPR (URL e chave anon).');
+  if(auto.sb&&auto.sbKey===c.url+'|'+c.anon)return auto.sb;
+  if(!window.supabase)await loadScript(SB_JS);
+  auto.sb=window.supabase.createClient(c.url,c.anon,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'estudioCards.vpr.auth'}});
+  auto.sbKey=c.url+'|'+c.anon;return auto.sb;
+}
+async function vprUser(){try{const sb=await vprClient();const {data}=await sb.auth.getSession();return data?.session?.user||null;}catch(e){return null;}}
+function setStep(t,pct){$('autoStep').textContent=t;if(pct!=null)$('autoBar').style.width=Math.max(0,Math.min(100,pct))+'%';}
+function setCur(v){$('autoCur').textContent=v?'video-'+v.numero+(v.autor_origem?' · @'+String(v.autor_origem).replace(/^@/,''):''):'—';}
+function autoWarn(t){$('autoWarn').textContent=t||'';}
+async function refreshFila(sb){
+  const {count}=await sb.from('videos').select('id',{count:'exact',head:true}).eq('status','na_fila');
+  $('autoFila').textContent=count==null?'—':String(count);
+}
+async function renderAutoList(sb){
+  sb=sb||await vprClient();
+  const {data}=await sb.from('videos').select('id,numero,status,autor_origem,erro_msg,frases_alternativas,updated_at')
+    .in('status',['pronto','erro']).order('updated_at',{ascending:false}).limit(6);
+  auto.list=data||[];const box=$('autoList');box.textContent='';
+  if(!auto.list.length){const p=document.createElement('p');p.className='hint';p.textContent='Nada pronto ainda.';box.appendChild(p);return;}
+  const frases=lsGet(VPR_FRASES)||{};
+  auto.list.forEach(v=>{
+    const b=document.createElement('button');b.type='button';b.className='autoItem'+(v.status==='erro'?' err':'');
+    const n=document.createElement('b');n.textContent='video-'+v.numero+(v.status==='erro'?' · erro':'');
+    const t=document.createElement('span');t.textContent=v.status==='erro'?(v.erro_msg||''):(frases[v.numero]||(v.autor_origem?'@'+v.autor_origem:'pronto'));
+    b.append(n,t);if(v.status==='pronto')b.onclick=()=>openReview(v.id);else b.disabled=true;
+    box.appendChild(b);
+  });
+}
+// trava: só pega o vídeo se ele ainda estiver na fila (update condicional)
+async function claimNext(sb){
+  const velho=new Date(Date.now()-20*60e3).toISOString(); // destrava quem ficou preso em "editando" (Estúdio fechado no meio)
+  await sb.from('videos').update({status:'na_fila'}).eq('status','editando').lt('updated_at',velho);
+  const {data,error}=await sb.from('videos').select('id,numero,autor_origem,arquivo_entrada,legenda_origem,conta_id,ordem')
+    .eq('status','na_fila').order('numero',{ascending:true}).limit(5);
+  if(error)throw new Error(error.message);
+  for(const v of data||[]){
+    const {data:got}=await sb.from('videos').update({status:'editando',erro_msg:null}).eq('id',v.id).eq('status','na_fila').select('id');
+    if(got&&got.length)return v;
+  }
+  return null;
+}
+async function contaPadrao(sb){
+  const {data}=await sb.from('contas').select('id,ativa').order('id').limit(10);
+  const c=(data||[]).find(x=>x.ativa!==false)||(data||[])[0];return c?c.id:null;
+}
+async function baixarEntrada(sb,v){
+  const path=v.arquivo_entrada||`entrada/video-${v.numero}.mp4`;
+  const {data,error}=await sb.storage.from(vprBucket()).download(path);
+  if(error||!data)throw new Error('Não achei '+path+(error?' ('+error.message+')':''));
+  return new File([data],`video-${v.numero}.mp4`,{type:data.type||'video/mp4'});
+}
+// libera memória entre vídeos (no iPhone já houve crash em vídeo longo)
+function freeMemory(){
+  state.shots=[];state.mapFrame=null;state.hasVideo=false;state.transcript='';state.trP=null;state.pipeP=null;
+  try{vid.pause();vid.removeAttribute('src');vid.load();}catch(e){}
+  if(srcUrl){URL.revokeObjectURL(srcUrl);srcUrl=null;}
+  map.width=map.height=1;$('mapBox').hidden=true;
+  if(ocrWorker){ocrWorker.then(w=>w.terminate()).catch(()=>{});ocrWorker=null;}
+}
+function autoErro(e){return String((e&&e.message)||e||'erro desconhecido').slice(0,400);}
+async function autoProcess(sb,v){
+  const N=v.numero;setCur(v);autoWarn('');
+  setStep('Baixando o vídeo',8);
+  const file=await baixarEntrada(sb,v);
+  setStep('Analisando cena e texto',18);
+  $('ctxIn').value=String(v.legenda_origem||'').slice(0,1500); // legenda original ajuda a IA a entender o vídeo
+  delete $('txt').dataset.touched;
+  if(!await loadVideo(file))throw new Error($('anStatus').textContent||'Não consegui abrir o vídeo.');
+  if(IS_IOS&&vid.duration>90)autoWarn(`video-${N} tem ${Math.round(vid.duration)} s: no iPhone, vídeos acima de 90 s podem travar. Se travar, rode o modo automático no Mac.`);
+  setStep('Entendendo o vídeo e criando frases',30);
+  const r=await state.pipeP;
+  if(!r||!r.list||!r.list.length)throw new Error('Frases: '+($('sugStatus').textContent||'a IA não respondeu'));
+  const best=r.list[r.best]||r.list[0],alts=r.list.filter(x=>x!==best).map(x=>x.texto);
+  $('txt').value=best.texto;
+  setStep('Renderizando o card',45);
+  const out=await exportCard({noPreview:true,onProgress:f=>setStep('Renderizando o card',45+f*40)});
+  if(!out)throw new Error('Render: '+$('status').textContent);
+  if(out.ext!=='mp4')throw new Error('Este navegador gerou WebM; o VPR precisa de MP4. Use o Safari ou o Chrome atualizado.');
+  setStep('Escrevendo a legenda',88);
+  await out.job.capP;
+  if(out.job.capState!=='ok')throw new Error('Legenda: '+(out.job.capMsg||'a IA não respondeu'));
+  let leg=out.job.caption.trim();
+  const autor=String(v.autor_origem||'').replace(/^@/,'').trim();
+  if(autor&&!leg.toLowerCase().includes('@'+autor.toLowerCase()))leg+='\n\n🎥 @'+autor;
+  setStep('Enviando para o VPR',94);
+  const st=sb.storage.from(vprBucket());
+  let up=await st.upload(`prontos/video-${N}.mp4`,out.blob,{upsert:true,contentType:'video/mp4'});
+  if(up.error)throw new Error('Envio do vídeo: '+up.error.message);
+  up=await st.upload(`prontos/legenda-${N}.txt`,new Blob([leg],{type:'text/plain;charset=utf-8'}),{upsert:true,contentType:'text/plain;charset=utf-8'});
+  if(up.error)throw new Error('Envio da legenda: '+up.error.message);
+  const upd={status:'pronto',arquivo_pronto:`prontos/video-${N}.mp4`,legenda:leg,frases_alternativas:alts,erro_msg:null};
+  if(!v.conta_id){const c=await contaPadrao(sb);if(c)upd.conta_id=c;}
+  if(v.ordem==null)upd.ordem=Date.now();
+  const {error}=await sb.from('videos').update(upd).eq('id',v.id);
+  if(error)throw new Error('Banco: '+error.message);
+  const fr=lsGet(VPR_FRASES)||{};fr[N]=best.texto;lsSet(VPR_FRASES,fr);
+  setStep('Pronto: video-'+N,100);
+}
+let autoWake=null;
+function autoSleep(ms){return new Promise(r=>{autoWake=r;setTimeout(r,ms);});}
+async function keepAwake(on){
+  try{
+    if(on&&'wakeLock' in navigator){if(!auto.wake||auto.wake.released)auto.wake=await navigator.wakeLock.request('screen');}
+    else if(!on&&auto.wake){await auto.wake.release();auto.wake=null;}
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!auto.on)return;
+  if(document.visibilityState==='visible')keepAwake(true);
+  else autoWarn('Deixe o Estúdio aberto na tela: em segundo plano o navegador pausa o render.');
+});
+async function autoLoop(){
+  while(auto.on){
+    let sb;
+    try{sb=await vprClient();if(!await vprUser())throw new Error('Entre na Conexão VPR (menu ⋮).');}
+    catch(e){autoStop(autoErro(e));return;}
+    if(auto.busy){await autoSleep(2000);continue;} // revisão em andamento
+    let v=null;
+    try{await refreshFila(sb);v=await claimNext(sb);}
+    catch(e){setStep('Erro ao ler a fila',0);autoWarn(autoErro(e));await autoSleep(30000);continue;}
+    if(!v){setCur(null);setStep('Fila vazia · olho de novo em 30 s',0);await autoSleep(30000);continue;}
+    auto.busy=true;auto.cur=v;
+    try{await autoProcess(sb,v);}
+    catch(e){
+      const msg=autoErro(e);setStep('Erro no video-'+v.numero,0);autoWarn('video-'+v.numero+': '+msg);
+      try{await sb.from('videos').update({status:'erro',erro_msg:'Edição: '+msg}).eq('id',v.id);}catch(_){}
+    }finally{auto.busy=false;auto.cur=null;freeMemory();}
+    try{await refreshFila(sb);await renderAutoList(sb);}catch(e){}
+    await autoSleep(1500);
+  }
+  setCur(null);setStep('Parado',0);
+}
+function autoUI(){
+  const b=$('autoBtn');b.setAttribute('aria-pressed',auto.on);
+  b.textContent=auto.on?'Modo automático LIGADO · tocar para desligar':'Ligar modo automático';
+  document.body.classList.toggle('autoRun',auto.on||auto.busy);
+  $('autoState').textContent=auto.on?(IS_IOS?'Tela acesa. No iPhone, deixe o app aberto e na frente.':'Tela acesa. Deixe esta aba visível enquanto roda.'):'';
+}
+async function autoStart(){
+  if(!await vprUser()){openDrawer('vpr');$('vprStatus').className='status warn';$('vprStatus').textContent='Conecte no VPR para ligar o modo automático.';return;}
+  if(!sample)sample=await getAI();
+  if(!sample){autoWarn('A IA está desligada: entre pelo servidor ou coloque uma chave em Configurações.');return;}
+  // libera áudio e vídeo dentro do toque (o navegador exige um gesto para tocar com som)
+  if($('keepAudio').checked&&setupAudio()){try{audioCtx.resume();}catch(e){}}
+  auto.on=true;autoUI();keepAwake(true);autoWarn('');
+  if(!auto.loopP)auto.loopP=autoLoop().finally(()=>{auto.loopP=null;autoUI();});
+}
+function autoStop(msg){
+  auto.on=false;keepAwake(false);if(autoWake)autoWake();autoUI();
+  if(msg)autoWarn(msg);else if(auto.busy)autoWarn('Desligando: termino o vídeo atual e paro.');
+}
+$('autoBtn').onclick=()=>auto.on?autoStop():autoStart();
+
+/* revisão: trocar pela frase alternativa, re-renderizar e sobrescrever o mesmo número */
+async function openReview(id){
+  const box=$('autoRev');box.hidden=false;box.textContent='Carregando…';
+  let v;try{const sb=await vprClient();const {data,error}=await sb.from('videos').select('id,numero,status,frases_alternativas,arquivo_entrada,autor_origem').eq('id',id).single();if(error)throw error;v=data;}
+  catch(e){box.textContent='Não consegui abrir: '+autoErro(e);return;}
+  const atual=(lsGet(VPR_FRASES)||{})[v.numero]||'';
+  const alts=Array.isArray(v.frases_alternativas)?v.frases_alternativas.filter(x=>typeof x==='string'&&x.trim()):[];
+  box.textContent='';
+  const h=document.createElement('b');h.textContent='Revisar video-'+v.numero;box.appendChild(h);
+  const p=document.createElement('p');p.className='hint';p.textContent=atual?'Frase atual: '+atual:'Frase atual: não registrada neste aparelho.';box.appendChild(p);
+  if(v.status!=='pronto'){const w=document.createElement('p');w.className='status warn';w.textContent='Esse vídeo não está mais em Pronto (agora: '+v.status+').';box.appendChild(w);}
+  else if(!alts.length){const w=document.createElement('p');w.className='hint';w.textContent='Não há frases alternativas salvas para esse vídeo.';box.appendChild(w);}
+  const st=document.createElement('div');st.className='status';
+  alts.forEach(f=>{const b=document.createElement('button');b.type='button';b.className='sug';
+    const e=document.createElement('em');e.textContent='Usar esta e re-renderizar';const t=document.createElement('b');t.textContent=f;b.append(e,t);
+    b.disabled=v.status!=='pronto';b.onclick=()=>reRender(v,f,atual,alts,st);box.appendChild(b);});
+  const fechar=document.createElement('button');fechar.type='button';fechar.className='btn';fechar.textContent='Fechar revisão';fechar.onclick=()=>{box.hidden=true;};
+  box.append(st,fechar);
+}
+async function reRender(v,frase,atual,alts,st){
+  if(auto.busy){st.className='status warn';st.textContent='Espere o vídeo atual terminar.';return;}
+  auto.busy=true;autoUI();st.className='status';
+  let sb,claimed=false,done=false;
+  try{
+    sb=await vprClient();
+    // trava em "editando" para o VPR não postar no meio do re-render
+    const {data:got}=await sb.from('videos').update({status:'editando'}).eq('id',v.id).eq('status','pronto').select('id');
+    if(!got||!got.length)throw new Error('o vídeo saiu de Pronto (pode ter sido postado).');
+    claimed=true;setCur(v);
+    st.textContent='Baixando o original…';setStep('Revisão: baixando',10);
+    const file=await baixarEntrada(sb,v);
+    st.textContent='Abrindo o vídeo…';setStep('Revisão: analisando',25);
+    if(!await loadVideo(file,{noAI:true}))throw new Error($('anStatus').textContent);
+    $('txt').value=frase;
+    st.textContent='Renderizando…';
+    const out=await exportCard({noCaption:true,noPreview:true,onProgress:f=>setStep('Revisão: renderizando',30+f*60)});
+    if(!out)throw new Error($('status').textContent);
+    if(out.ext!=='mp4')throw new Error('este navegador gerou WebM; use o Safari ou o Chrome atualizado.');
+    st.textContent='Enviando…';setStep('Revisão: enviando',95);
+    const up=await sb.storage.from(vprBucket()).upload(`prontos/video-${v.numero}.mp4`,out.blob,{upsert:true,contentType:'video/mp4'});
+    if(up.error)throw new Error(up.error.message);
+    const novas=[...(atual?[atual]:[]),...alts.filter(x=>x!==frase)];
+    const {error}=await sb.from('videos').update({status:'pronto',frases_alternativas:novas,erro_msg:null}).eq('id',v.id);
+    if(error)throw new Error(error.message);claimed=false;
+    const fr=lsGet(VPR_FRASES)||{};fr[v.numero]=frase;lsSet(VPR_FRASES,fr);
+    done=true;setStep('Revisão pronta',100);
+  }catch(e){
+    st.className='status warn';st.textContent='Não deu: '+autoErro(e)+' O vídeo anterior continua em Pronto.';
+  }finally{
+    if(claimed&&sb){try{await sb.from('videos').update({status:'pronto'}).eq('id',v.id).eq('status','editando');}catch(_){}}
+    auto.busy=false;setCur(null);freeMemory();autoUI();
+    try{await renderAutoList();}catch(_){}
+    if(done){await openReview(v.id);const s2=$('autoRev').querySelector('.status');if(s2){s2.className='status ok';s2.textContent='video-'+v.numero+' re-renderizado com a frase nova.';}}
+  }
+}
+
+/* Conexão VPR (menu ⋮) */
+function vprFormFill(){const c=vprCfg();$('vprUrl').value=c.url||'';$('vprAnon').value=c.anon||'';$('vprBucket').value=c.bucket||'videos';$('vprMail').value=c.email||'';}
+async function vprRefresh(){
+  const c=vprCfg();$('autoSec').hidden=IN_VIEWER||!(c.url&&c.anon);
+  if($('autoSec').hidden)return;
+  const u=await vprUser();const st=$('vprStatus');
+  if(u){st.className='status ok';st.textContent='Conectado como '+u.email+'.';try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}}
+  else{st.className='status warn';st.textContent='Não conectado: preencha e toque em Conectar.';$('autoFila').textContent='—';}
+}
+$('vprLogin').onclick=async()=>{
+  const st=$('vprStatus');
+  const c={url:$('vprUrl').value.trim().replace(/\/+$/,''),anon:$('vprAnon').value.trim(),bucket:$('vprBucket').value.trim()||'videos',email:$('vprMail').value.trim().toLowerCase()};
+  if(!/^https:\/\/.+/.test(c.url)||!c.anon){st.className='status warn';st.textContent='Preencha a URL (https://…) e a chave anon.';return;}
+  lsSet(VPR_KEY,c);st.className='status';st.textContent='Conectando…';
+  try{
+    const sb=await vprClient();
+    const pass=$('vprPass').value;
+    if(pass){const {error}=await sb.auth.signInWithPassword({email:c.email,password:pass});if(error)throw error;}
+    $('vprPass').value='';
+    if(!await vprUser())throw new Error('Digite o e-mail e a senha do VPR.');
+    await vprRefresh();
+  }catch(e){st.className='status warn';st.textContent='Não conectou: '+autoErro(e);$('autoSec').hidden=!(c.url&&c.anon);}
+};
+$('vprLogout').onclick=async()=>{
+  if(auto.on)autoStop();
+  try{const sb=await vprClient();await sb.auth.signOut();}catch(e){}
+  $('vprStatus').className='status';$('vprStatus').textContent='Desconectado do VPR.';$('autoFila').textContent='—';
+};
+
 /* ---------- menu lateral (⋮) ---------- */
-const VIEWS={leg:'Legendas geradas',perfis:'Perfis',cfg:'Configurações',conta:'Conta'};
+const VIEWS={leg:'Legendas geradas',perfis:'Perfis',vpr:'Conexão VPR',cfg:'Configurações',conta:'Conta'};
 let drawerFrom=null;
 function showView(v){
   $('drMenu').hidden=!!v;$('drBack').hidden=!v;$('drTitle').textContent=v?VIEWS[v]:'Menu';
@@ -1213,6 +1523,7 @@ function showView(v){
   if(v==='leg')renderLegendas();
   if(v==='perfis'){renderProfList();$('profForm').hidden=true;$('newProf').hidden=false;$('profStatus').textContent='';}
   if(v==='cfg')refreshCfgUI();
+  if(v==='vpr'){vprFormFill();vprRefresh();}
   if(v==='conta'){const x=lsGet(SES_KEY)||{};$('contaMail2').textContent=x.email||'';
     $('contaMode').textContent=x.mode==='server'?'Login pelo servidor: a senha e a chave da IA ficam na Vercel.':'Login só neste aparelho (o servidor não respondeu quando você entrou).';}
 }
@@ -1225,7 +1536,7 @@ $('drBack').onclick=()=>showView(null);
 $('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))closeDrawer();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDrawer();});
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;}
+if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;$('navVpr').hidden=true;}
 $('manageProf').onclick=()=>openDrawer('perfis');
 
 /* ---------- perfis: foto, nome, arroba, selo e o jeito de escrever ---------- */
@@ -1369,7 +1680,7 @@ $('logoutBtn').onclick=()=>{try{localStorage.removeItem(SES_KEY);}catch(e){}show
 if(IN_VIEWER)unlock();
 else{const ses=lsGet(SES_KEY),ok=ses&&ses.until>Date.now()&&(ses.mode==='server'?!!ses.token:!!lsGet(ACC_KEY));if(ok)unlock();else showGate();}
 
-loadProfiles();loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();
+loadProfiles();loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();if(!IN_VIEWER&&vprCfg().url)vprRefresh();
 const go=()=>{draw();requestAnimationFrame(loop);};
 avatar.onload=draw;
 if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('800 60px Montserrat'),document.fonts.load('700 44px Montserrat'),document.fonts.load('500 36px Montserrat')]).finally(go);}else go();

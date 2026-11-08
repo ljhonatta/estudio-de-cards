@@ -42,6 +42,16 @@ Sem servidor no ar, o app ainda funciona: o login vira um acesso só do aparelho
 - **Legendas:** 3 opções por vídeo (Reflexão, História, Direta), com CTA para o perfil escolhido. Toque em 1, 2 ou 3 para trocar.
 - **Perfis:** ⋮ → Perfis. Cada perfil tem foto, nome, arroba, selo e um texto "sobre o perfil" que a IA usa. No passo 3 do editor você escolhe qual perfil vai no card.
 
+## Modo automático (VPR Insta Full Postagens)
+
+O Estúdio edita sozinho a fila do VPR Insta Full Postagens (mesmo Supabase).
+
+1. ⋮ → **Conexão VPR**: URL do Supabase e chave anon (no Mac, estão em `http://localhost:5056/config.js`), bucket (`videos`), e-mail e senha do VPR → **Conectar**.
+2. No topo do editor, **Ligar modo automático**. Para cada vídeo `na_fila` (menor número primeiro): trava como `editando` → baixa `entrada/video-N.mp4` → acha cena e texto, transcreve a fala → 3 frases, usa a mais forte e guarda as outras 2 → renderiza o MP4 com o áudio original → legenda (gancho, reflexão, CTA, 3 hashtags, `🎥 @autor`) → envia `prontos/video-N.mp4` + `prontos/legenda-N.txt` → marca `pronto`. Erro num vídeo vira `erro` com a mensagem e a fila segue. Fila vazia: olha de novo a cada 30 s.
+3. **Revisão**: toque num pronto da lista, escolha a frase alternativa e o Estúdio re-renderiza e sobrescreve o mesmo número.
+
+Dicas: rode no Mac (Chrome ou Safari), com a aba visível — em segundo plano o navegador pausa o render. A tela fica acesa enquanto o modo está ligado. No iPhone funciona, mas vídeos acima de 90 s podem travar.
+
 ## Estrutura
 
 ```
