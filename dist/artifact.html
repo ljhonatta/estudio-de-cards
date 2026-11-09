@@ -1006,15 +1006,15 @@ const hasWebCodecs=()=>typeof VideoEncoder!=='undefined'&&typeof VideoDecoder!==
 async function openMp4(file){
   if(!file||!hasWebCodecs())return null;
   try{
-    if($('keepAudio').checked&&(typeof AudioEncoder==='undefined'||!(await AudioEncoder.isConfigSupported(AAC)).supported))return null;
     if(!window.MP4Box)await loadScript(MP4BOX_JS);
     const buf=await file.arrayBuffer();buf.fileStart=0;
-    const mp=MP4Box.createFile();let info=null,err=null;const samples=[];
+    const mp=MP4Box.createFile();let info=null,err=null;const byTrack={};
     mp.onError=e=>{err=e;};
-    mp.onReady=i=>{info=i;const t=i.videoTracks[0];if(t){mp.setExtractionOptions(t.id,null,{nbSamples:1e9});mp.start();}};
-    mp.onSamples=(id,u,list)=>{for(const x of list)samples.push(x);};
+    mp.onReady=i=>{info=i;const v=i.videoTracks[0],a=i.audioTracks[0];
+      if(v)mp.setExtractionOptions(v.id,null,{nbSamples:1e9});if(a)mp.setExtractionOptions(a.id,null,{nbSamples:1e9});if(v)mp.start();};
+    mp.onSamples=(id,u,list)=>{(byTrack[id]=byTrack[id]||[]).push(...list);};
     mp.appendBuffer(buf);mp.flush();
-    const vt=info&&info.videoTracks[0];
+    const vt=info&&info.videoTracks[0],samples=vt?byTrack[vt.id]||[]:[];
     if(err||!vt||!samples.length)return null;
     let description;
     for(const e of mp.getTrackById(vt.id).mdia.minf.stbl.stsd.entries){
@@ -1024,21 +1024,31 @@ async function openMp4(file){
     const config={codec:vt.codec,codedWidth:vt.video.width,codedHeight:vt.video.height,description};
     if(!(await VideoDecoder.isConfigSupported(config)).supported)return null;
     const dur=samples.reduce((m,x)=>Math.max(m,(x.cts+x.duration)/x.timescale),0);
-    return {config,samples,dur,file,hasAudio:!!(info.audioTracks&&info.audioTracks.length)};
+    // áudio: copia o AAC original sem mexer; se não for AAC, decodifica e recodifica; se nada der, usa a gravação antiga
+    let audio=null;const at=info.audioTracks&&info.audioTracks[0];
+    if($('keepAudio').checked&&at){
+      let asc=null;try{asc=mp.getTrackById(at.id).mdia.minf.stbl.stsd.entries[0].esds.esd.descs[0].descs[0].data;}catch(e){}
+      const aSamples=byTrack[at.id]||[];
+      if(asc&&/^mp4a\.40/.test(at.codec||'')&&aSamples.length){
+        audio={mode:'copy',codec:at.codec,sampleRate:at.audio.sample_rate,channels:at.audio.channel_count,asc:new Uint8Array(asc),samples:aSamples};
+      }else{
+        if(typeof AudioEncoder==='undefined'||!(await AudioEncoder.isConfigSupported(AAC)).supported)return null;
+        try{
+          const oac=new OfflineAudioContext(2,AAC.sampleRate,AAC.sampleRate),ab=await file.arrayBuffer();
+          const pcm=await new Promise((res,rej)=>{const q=oac.decodeAudioData(ab,res,rej);if(q&&q.then)q.then(res,rej);});
+          audio={mode:'encode',pcm};
+        }catch(e){return null;}
+      }
+    }
+    return {config,samples,dur,file,audio};
   }catch(e){return null;}
 }
 async function renderFrames(src,opts){
   if(!window.Mp4Muxer)await loadScript(MUXER_JS);
   const fps=OUT_FPS,step=1e6/fps,total=Math.max(1,Math.round(src.dur*fps));
-  let pcm=null,nc=0;
-  if(opts.audio&&src.hasAudio){
-    const oac=new OfflineAudioContext(2,AAC.sampleRate,AAC.sampleRate),ab=await src.file.arrayBuffer();
-    try{pcm=await new Promise((res,rej)=>{const q=oac.decodeAudioData(ab,res,rej);if(q&&q.then)q.then(res,rej);});}
-    catch(e){throw new Error('não consegui ler o áudio do vídeo original');}
-    nc=Math.min(2,pcm.numberOfChannels);
-  }
+  const au=src.audio,pcm=au&&au.mode==='encode'?au.pcm:null,nc=pcm?Math.min(2,pcm.numberOfChannels):au?au.channels:0;
   const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),fastStart:'in-memory',firstTimestampBehavior:'offset',
-    video:{codec:'avc',width:W,height:H,frameRate:fps},audio:pcm?{codec:'aac',numberOfChannels:nc,sampleRate:pcm.sampleRate}:undefined});
+    video:{codec:'avc',width:W,height:H,frameRate:fps},audio:au?{codec:'aac',numberOfChannels:nc,sampleRate:pcm?pcm.sampleRate:au.sampleRate}:undefined});
   let fail=null;
   const enc=new VideoEncoder({output:(c,m)=>muxer.addVideoChunk(c,m),error:e=>{fail=e;}});
   const vcfg={codec:'avc1.640028',width:W,height:H,bitrate:6e6,framerate:fps,avc:{format:'avc'}};
@@ -1072,7 +1082,16 @@ async function renderFrames(src,opts){
     await enc.flush();
     if(fail)throw fail;
   }finally{if(prev)prev.close();prev=null;state.frameSrc=null;try{dec.close();}catch(e){}try{enc.close();}catch(e){}}
-  if(pcm){ // áudio original → AAC, cortado na duração do vídeo
+  if(au&&au.mode==='copy'){ // AAC original copiado como está, cortado na duração do vídeo
+    const end=src.dur*1e6;let firstA=true;
+    for(const x of au.samples){
+      const ts=Math.round(x.cts*1e6/x.timescale);if(ts>=end)break;
+      muxer.addAudioChunkRaw(new Uint8Array(x.data),'key',ts,Math.round(x.duration*1e6/x.timescale),
+        firstA?{decoderConfig:{codec:au.codec,sampleRate:au.sampleRate,numberOfChannels:au.channels,description:au.asc}}:undefined);
+      firstA=false;
+    }
+  }
+  if(pcm){ // áudio que não é AAC → decodificado e recodificado em AAC, cortado na duração do vídeo
     const aenc=new AudioEncoder({output:(c,m)=>muxer.addAudioChunk(c,m),error:e=>{fail=e;}});
     aenc.configure({...AAC,sampleRate:pcm.sampleRate,numberOfChannels:nc});
     const len=Math.min(pcm.length,Math.round(src.dur*pcm.sampleRate)),N=4096,ch=[...Array(nc)].map((_,c)=>pcm.getChannelData(c));
@@ -1098,7 +1117,7 @@ async function exportFrames(src,opts){
   const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
   if(!opts.noCaption)job.capP=genCaption(job);
   let blob;
-  try{blob=await renderFrames(src,{audio:$('keepAudio').checked,onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
+  try{blob=await renderFrames(src,{onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
   catch(e){state.exporting=false;$('exportBtn').disabled=false;setStatus('Não consegui gerar o vídeo: '+((e&&e.message)||e),'warn');draw();return null;}
   state.blob=blob;state.ext='mp4';
   addOutput(blob,'mp4',job);$('bar').style.width='100%';
