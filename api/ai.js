@@ -3,7 +3,7 @@
 // Modelos opcionais: OPENAI_MODEL, OPENAI_MODEL_QUICK, ANTHROPIC_MODEL, ANTHROPIC_MODEL_QUICK.
 const { env, preflight, fail, readToken } = require("./_lib");
 
-const MAX_TOKENS = 3000;
+const MAX_TOKENS = 4000; // o plano de conexão (JSON com legenda) é grande
 
 module.exports = async (req, res) => {
   if (preflight(req, res)) return;

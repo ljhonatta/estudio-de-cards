@@ -177,6 +177,17 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 body.autoRun .manual{pointer-events:none;opacity:.55}
 #autoBtn[aria-pressed=true]{background:#18241c;color:var(--green);border-color:var(--green)}
 .trBox{font-size:13px}
+/* revisão de conexão */
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score b{font-family:var(--display);font-size:46px;line-height:1;font-variant-numeric:tabular-nums}
+.score b.to{color:var(--gold)}
+.score span{color:var(--muted);font-size:24px}
+.score small{color:var(--muted);font-size:12.5px;flex-basis:100%}
+.crit{font-size:12.5px;color:var(--muted)}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted)}
+.kv b{color:var(--fg);font-weight:600;text-align:right}
+.inl{display:flex;gap:8px;align-items:center}
+.inl>select,.inl>input{flex:1;min-width:0}
 .trBox p{white-space:pre-line;margin:8px 0 0}
 /* tela de acesso */
 .gate{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px;overflow-y:auto}
@@ -251,11 +262,12 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <div class="status" id="anStatus"></div>
         <div id="mapBox" hidden>
           <div class="map"><canvas id="map" aria-label="Áreas detectadas no vídeo"></canvas></div>
-          <div class="legend" style="margin-top:8px"><span><i style="background:var(--green)"></i>Cena que vai para o card</span><span><i style="background:var(--gold)"></i>Texto original</span></div>
+          <div class="legend" style="margin-top:8px"><span><i style="background:var(--green)"></i>Cena que vai para o card</span><span><i style="background:var(--gold)"></i>Texto original</span><span><i style="background:#fff"></i>Marca d'água (o selo cobre)</span></div>
           <div class="hint" style="margin:12px 0 6px">Errou a área? Toque em qual corrigir e depois arraste o dedo sobre a imagem. Fora disso a imagem fica travada e a tela rola normal.</div>
           <div class="seg" role="group" aria-label="Área para ajustar">
             <button type="button" class="v" data-mode="video" aria-pressed="false">Ajustar cena</button>
             <button type="button" data-mode="text" aria-pressed="false">Ajustar texto</button>
+            <button type="button" data-mode="wm" aria-pressed="false">Ajustar selo</button>
           </div>
           <button class="btn" id="reAnalyze" type="button" style="margin-top:10px">Detectar de novo</button>
         </div>
@@ -310,6 +322,29 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         </details>
       </section>
 
+      <section class="sec manual" id="planSec" hidden>
+        <h2>Conexão · revisão</h2>
+        <div class="score"><b id="scBefore">–</b><span>→</span><b class="to" id="scAfter">–</b><small id="scInfo">nota de conexão (0 a 10): antes → depois</small></div>
+        <div class="crit" id="crit"></div>
+        <p class="hint" id="planWhy"></p>
+        <div class="sugList" id="altList"></div>
+        <p class="status warn" id="planAlert" hidden></p>
+        <div class="kv"><span>Marca d'água</span><b id="wmMsg">—</b></div>
+        <label class="f">Rodapé de repost
+          <div class="inl"><select id="rodSel"></select><button class="btn" id="rodSwap" type="button">Trocar</button></div>
+        </label>
+        <p class="hint" id="rodWhy"></p>
+        <label class="f">Começar o vídeo em (segundos; 0 = do início)
+          <div class="inl"><input type="text" id="cutIn" inputmode="decimal" value="0"><span class="hint" id="cutWhy"></span></div>
+        </label>
+        <label class="f">Legenda (uma ação só)<textarea id="planLeg" style="min-height:150px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
+        <div class="file"><button class="btn" id="copyLeg" type="button">Copiar legenda</button></div>
+        <label class="f">Comentário para fixar<textarea id="planCom" style="min-height:64px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
+        <div class="file"><button class="btn" id="copyCom" type="button">Copiar comentário</button><button class="btn" id="planAgain" type="button">Analisar de novo</button></div>
+        <button class="btn gold big" id="planGo" type="button">Gerar vídeo</button>
+        <div class="status" id="planStatus"></div>
+      </section>
+
       <section class="sec manual">
         <h2>3 · Perfil</h2>
         <label class="f">Perfil que vai no card e na legenda<select id="profSel"></select></label>
@@ -346,6 +381,7 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
     </div>
     <nav class="navList" id="drMenu">
       <button class="navItem" type="button" data-view="leg">Legendas geradas<small>As últimas 50, para copiar de novo</small></button>
+      <button class="navItem" type="button" data-view="card">Card, selo e rodapés<small>Nome e @ do cabeçalho, @ do selo e frases de repost</small></button>
       <button class="navItem" type="button" data-view="perfis">Perfis<small>Foto, nome, arroba e o jeito de escrever de cada perfil</small></button>
       <button class="navItem" type="button" data-view="vpr" id="navVpr">Conexão VPR<small>Fila do VPR Insta Full e modo automático</small></button>
       <button class="navItem" type="button" data-view="cfg" id="navCfg">Configurações do web app<small>Chave da IA, modelos e instalação</small></button>
@@ -355,6 +391,17 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <p class="hint">As últimas 50 legendas ficam guardadas aqui, mesmo depois que o vídeo sai da lista. Toque no texto para ver inteiro.</p>
         <div class="legList" id="legList"></div>
         <div class="status" id="legStatus"></div>
+    </section>
+    <section class="drView" data-v="card" hidden>
+      <p class="hint">O nome e o @ vão no cabeçalho de todo card. O selo "Siga o @…" fica sobre o vídeo. Com a Conexão VPR ativa, tudo é salvo no Supabase (na sua conta); sem ela, só neste aparelho.</p>
+      <label class="f">Nome no cabeçalho<input type="text" id="cfgNome" maxlength="40"></label>
+      <label class="f">@ no cabeçalho<input type="text" id="cfgHandle" maxlength="40" placeholder="@ojhonatta1"></label>
+      <label class="f">@ do selo "Siga o @…" (vazio = o mesmo do cabeçalho)<input type="text" id="cfgSelo" maxlength="40"></label>
+      <label class="f">Biblioteca de rodapés: uma linha com o nome da categoria e, embaixo, as frases (começam com 🔁, até 45 caracteres)
+        <textarea id="cfgRod" style="min-height:300px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
+      <div class="file"><button class="btn gold" id="cfgCardSave" type="button">Salvar</button><button class="btn" id="cfgRodReset" type="button">Voltar à biblioteca padrão</button></div>
+      <div class="status" id="cfgCardStatus"></div>
+      <p class="hint">Últimos rodapés usados (não se repetem nos próximos 5 vídeos): <span id="cfgHist">—</span></p>
     </section>
     <section class="drView" data-v="perfis" hidden>
       <p class="hint">Cada perfil tem foto, nome, arroba e selo do card, e um texto sobre o perfil que a IA usa para escrever frases e legendas no tom certo. Na hora de editar, você escolhe qual usar.</p>
@@ -509,16 +556,16 @@ function boxH(){
 function draw(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   // tudo cabe na área 4:5 do Feed (y 285 a 1635), com folga
-  const AVAIL=FEED_BOT-FEED_TOP-80,headH=120,gap1=48,gap2=48,MINBOX=420;
+  const AVAIL=FEED_BOT-FEED_TOP-80,headH=120,gap1=48,gap2=48,MINBOX=420,FOOT=state.rodape?84:0;
   let size=state.size,lh,lines,textH;
   for(;;){
     lh=Math.round(size*1.2);ctx.font=`800 ${size}px Montserrat, system-ui, sans-serif`;
     lines=wrap($('txt').value.trim()||' ',W-PAD*2);textH=lines.length*lh;
-    if(headH+gap1+textH+gap2+MINBOX<=AVAIL||size<=40)break;size-=2;
+    if(headH+gap1+textH+gap2+MINBOX+FOOT<=AVAIL||size<=40)break;size-=2;
   }
   state.fitSize=size;
-  const bh=Math.max(300,Math.min(boxH(),AVAIL-(headH+gap1+textH+gap2)));
-  const top=Math.round((H-(headH+gap1+textH+gap2+bh))/2);
+  const bh=Math.max(300,Math.min(boxH(),AVAIL-(headH+gap1+textH+gap2+FOOT)));
+  const top=Math.round((H-(headH+gap1+textH+gap2+bh+FOOT))/2);
   const ax=PAD,ay=top,ar=60;
   ctx.save();ctx.beginPath();ctx.arc(ax+ar,ay+ar,ar,0,Math.PI*2);ctx.clip();
   if(avatar.complete&&avatar.naturalWidth){const s=Math.min(avatar.naturalWidth,avatar.naturalHeight);ctx.drawImage(avatar,(avatar.naturalWidth-s)/2,(avatar.naturalHeight-s)/2,s,s,ax,ay,ar*2,ar*2);}
@@ -542,7 +589,7 @@ function draw(){
     const t=state.scene,z=state.zoom,target=W/bh;
     let sw=t.w/z,sh=t.h/z; if(sw/sh>target)sw=sh*target; else sh=sw/target;
     state.layout={by,bh,sx:t.x+(t.w-sw)/2,sy:t.y+(t.h-sh)*state.pos,sw,sh};
-  }
+  }else state.layout={by,bh,sx:0,sy:0,sw:W,sh:bh};
   if(state.hasVideo&&state.scene&&(state.frameSrc||vid.readyState>=2)){
     const L=state.layout;
     ctx.drawImage(vsrc,L.sx,L.sy,L.sw,L.sh,0,by,W,bh);
@@ -551,12 +598,45 @@ function draw(){
     ctx.fillStyle='#55555c';ctx.textAlign='center';ctx.font='600 40px Montserrat, system-ui, sans-serif';
     ctx.fillText(state.analyzing?'analisando o vídeo…':'a cena aparece aqui',W/2,by+bh/2+14);
   }
+  drawSelo();
+  if(state.rodape){ // rodapé de repost: centro do espaço preto abaixo do vídeo
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#b9b9bf';ctx.font='600 34px Montserrat, system-ui, sans-serif';
+    ctx.fillText(state.rodape,W/2,Math.round((by+bh+Math.max(by+bh+FOOT,FEED_BOT))/2),W-PAD*2);ctx.restore();
+  }
   if(!state.exporting&&$('guide').checked){
     ctx.save();ctx.strokeStyle='rgba(201,169,110,.9)';ctx.lineWidth=4;ctx.setLineDash([24,16]);
     [FEED_TOP,FEED_BOT].forEach(y=>{ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();});
     ctx.setLineDash([]);ctx.fillStyle='rgba(201,169,110,.95)';ctx.font='700 30px Montserrat, system-ui, sans-serif';ctx.textAlign='right';
     ctx.fillText('corte do Feed',W-24,FEED_TOP-14);ctx.restore();
   }
+}
+// selo "Siga o @…": faixa preta, texto branco em negrito, sobre o vídeo do começo ao fim.
+// Com marca d'água de terceiro (state.wm, em pixels do vídeo original), a faixa cobre a área inteira.
+function seloBox(){
+  const L=state.layout;if(!L)return null;
+  const txt='Siga o '+seloHandle();
+  let r=null;
+  if(state.wm){
+    const kx=W/L.sw,ky=L.bh/L.sh;
+    let x0=(state.wm.x-L.sx)*kx,y0=L.by+(state.wm.y-L.sy)*ky,x1=x0+state.wm.w*kx,y1=y0+state.wm.h*ky;
+    x0=Math.max(0,x0);x1=Math.min(W,x1);y0=Math.max(L.by,y0);y1=Math.min(L.by+L.bh,y1);
+    if(x1-x0>4&&y1-y0>4){const pd=12;r={x:x0-pd,y:y0-pd,w:x1-x0+2*pd,h:y1-y0+2*pd};}
+  }
+  const h0=Math.round(Math.max(64,L.bh*.075));
+  if(!r)r={x:W/2,y:L.by+L.bh*5/6-h0/2,w:0,h:h0}; // padrão: centro do terço inferior
+  if(r.h<56){const cy=r.y+r.h/2;r.h=56;r.y=cy-28;}
+  let fs=Math.round(Math.min(r.h*.5,48));ctx.font=`800 ${fs}px Montserrat, system-ui, sans-serif`;
+  let need=ctx.measureText(txt).width+fs*1.4;
+  if(need>W){fs=Math.floor(fs*(W-8)/need);ctx.font=`800 ${fs}px Montserrat, system-ui, sans-serif`;need=W;}
+  if(r.w<need){const cx=r.x+r.w/2;r.x=cx-need/2;r.w=need;} // a faixa cresce para caber o texto e continua cobrindo a marca
+  r.x=Math.max(0,Math.min(W-r.w,r.x));r.y=Math.max(L.by,Math.min(L.by+L.bh-r.h,r.y));
+  return {r,fs,txt};
+}
+function drawSelo(){
+  const b=seloBox();if(!b)return;
+  ctx.save();ctx.fillStyle='#000';ctx.fillRect(b.r.x,b.r.y,b.r.w,b.r.h);
+  ctx.fillStyle='#fff';ctx.font=`800 ${b.fs}px Montserrat, system-ui, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(b.txt,b.r.x+b.r.w/2,b.r.y+b.r.h/2+2);ctx.restore();
 }
 function loop(){ if(!state.exporting&&!state.analyzing) draw(); requestAnimationFrame(loop); }
 
@@ -638,7 +718,7 @@ function drawMap(){
   map.width=f.width;map.height=f.height;mctx.drawImage(f,0,0);
   const s=f.width/vid.videoWidth,lw=Math.max(3,f.width/160);
   const rect=(r,c,on)=>{if(!r)return;mctx.save();mctx.strokeStyle=c;mctx.lineWidth=on?lw*1.6:lw;mctx.setLineDash(on?[]:[lw*3,lw*2]);mctx.strokeRect(r.x*s,r.y*s,r.w*s,r.h*s);mctx.restore();};
-  rect(state.text,'#c9a96e',state.mode==='text');rect(state.scene,'#6fd08c',state.mode==='video');
+  rect(state.text,'#c9a96e',state.mode==='text');rect(state.scene,'#6fd08c',state.mode==='video');rect(state.wm,'#ffffff',state.mode==='wm');
   if(drag){mctx.save();mctx.fillStyle=state.mode==='video'?'rgba(111,208,140,.25)':'rgba(201,169,110,.25)';mctx.fillRect(Math.min(drag.x0,drag.x1),Math.min(drag.y0,drag.y1),Math.abs(drag.x1-drag.x0),Math.abs(drag.y1-drag.y0));mctx.restore();}
 }
 function mapPt(e){const b=map.getBoundingClientRect();return {x:(e.clientX-b.left)*map.width/b.width,y:(e.clientY-b.top)*map.height/b.height};}
@@ -648,7 +728,12 @@ map.addEventListener('pointerup',()=>{
   if(!drag)return;const s=map.width/vid.videoWidth;
   const r={x:Math.min(drag.x0,drag.x1)/s,y:Math.min(drag.y0,drag.y1)/s,w:Math.abs(drag.x1-drag.x0)/s,h:Math.abs(drag.y1-drag.y0)/s};
   drag=null;
-  if(r.w>12&&r.h>12){if(state.mode==='video')state.scene=clampRect(r);else{state.text=clampRect(r);readText();}setSeg('mode',state.mode);}
+  if(r.w>12&&r.h>12){
+    if(state.mode==='video')state.scene=clampRect(r);
+    else if(state.mode==='wm'){state.wm={...clampRect(r),src:'manual'};updateWmMsg();}
+    else{state.text=clampRect(r);planAfterRead();}
+    setSeg('mode',state.mode);
+  }
   drawMap();
 });
 map.addEventListener('pointercancel',()=>{drag=null;drawMap();});
@@ -823,11 +908,11 @@ async function readLocal(c,os,why){
   try{
     const fr=await localRead(c);
     if(fr){$('txt').value=fr;$('sugg').hidden=true;lastOrig=fr;os.className='status ok';os.textContent='Frase original copiada do vídeo (lida no aparelho). Confira se ficou certinha.';
-      return {list:[{texto:fr}],best:0};}
-    else{os.className='status warn';os.textContent='Não achei frase nessa área. Marque a área do texto no mapa ou digite a frase.';}
-  }catch(e){os.className='status warn';os.textContent='Não consegui ler a frase. Digite a frase.'+OFF_HINT;}
+      return fr;}
+    else{lastOrig='';os.className='status warn';os.textContent='Não achei frase nessa área. Marque a área do texto no mapa ou digite a frase.';}
+  }catch(e){lastOrig='';os.className='status warn';os.textContent='Não consegui ler a frase. Digite a frase.'+OFF_HINT;}
   finally{$('readBtn').disabled=!state.hasVideo;}
-  return null;
+  return '';
 }
 async function readText(){
   const os=$('ocrStatus');
@@ -851,8 +936,8 @@ async function readText(){
     const fr=out&&typeof out.frase==='string'?out.frase.trim():'';
     $('readBtn').disabled=!state.hasVideo;
     // o card usa exatamente a frase do vídeo original, sem sugestões
-    if(fr){$('txt').value=fr;$('sugg').hidden=true;lastOrig=fr;os.className='status ok';os.textContent='Frase original copiada do vídeo.';return {list:[{texto:fr}],best:0};}
-    os.className='status';os.textContent='Esse vídeo não tem frase. Criando uma a partir da cena…';return await genSuggestions('');
+    if(fr){$('txt').value=fr;$('sugg').hidden=true;lastOrig=fr;os.className='status ok';os.textContent='Frase original copiada do vídeo.';return fr;}
+    lastOrig='';os.className='status';os.textContent='Esse vídeo não tem frase. A IA vai criar uma.';return '';
   }catch(e){
     const code=e&&e.code;
     if(code==='cancelled'){$('readBtn').disabled=!state.hasVideo;return null;}
@@ -862,7 +947,205 @@ async function readText(){
     return readLocal(c,os,why);
   }
 }
-$('readBtn').onclick=readText;
+// lê a frase do vídeo e roda o motor de conexão em cima dela
+function planAfterRead(){return readText().then(fr=>fr===null?null:connectionPlan(lastOrig));}
+$('readBtn').onclick=planAfterRead;
+
+/* ---------- motor de conexão: entende o vídeo, dá nota, reescreve se precisar e planeja o card ---------- */
+const CRIT_MAX={identificacao:3,envio:2,clareza:2,emocao:2,coerencia:1};
+const CRIT_NOME={identificacao:'Identificação',envio:'Envio',clareza:'Clareza',emocao:'Emoção',coerencia:'Coerência'};
+let planCtl=null,planSeq=0;
+// procura "Siga o @…", "@perfil" escrito sobre a cena (OCR no aparelho): devolve a área em pixels do vídeo original
+async function detectWatermarkOCR(){
+  try{
+    const f=state.mapFrame,sc=state.scene;if(!f||!sc||!vid.videoWidth)return null;
+    const s=f.width/vid.videoWidth,c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(sc.w*s));c.height=Math.max(1,Math.round(sc.h*s));
+    c.getContext('2d').drawImage(f,sc.x*s,sc.y*s,sc.w*s,sc.h*s,0,0,c.width,c.height);
+    if(!ocrWorker)ocrWorker=(async()=>{if(!window.Tesseract)await loadScript(OCR_JS);return Tesseract.createWorker('por');})();
+    let w;try{w=await ocrWorker;}catch(e){ocrWorker=null;return null;}
+    const {data}=await w.recognize(c);
+    const re=/@[\w.]{3,}|\bsiga\b|\bfollow\b/i;
+    const hits=(data.lines||[]).filter(l=>l.confidence>=40&&re.test(l.text||''));
+    if(!hits.length)return null;
+    let x0=1e9,y0=1e9,x1=0,y1=0;
+    for(const l of hits){const b=l.bbox;x0=Math.min(x0,b.x0);y0=Math.min(y0,b.y0);x1=Math.max(x1,b.x1);y1=Math.max(y1,b.y1);}
+    return {x:sc.x+x0/s,y:sc.y+y0/s,w:(x1-x0)/s,h:(y1-y0)/s,src:'ocr'};
+  }catch(e){return null;}
+}
+function pickRodape(lib,hist,nicho){
+  const n=String(nicho||'').toLowerCase(),cats=Object.keys(lib);
+  const cat=cats.find(k=>k.toLowerCase().split(/[\s/]+/).some(w=>w.length>3&&n.includes(w)));
+  const pool=[...(cat?lib[cat]:[]),...cats.flatMap(k=>lib[k])];
+  return pool.find(x=>!hist.includes(x))||pool[0]||'🔁 Reposta se isso é você';
+}
+function normalizePlan(o,orig,lib,hist){
+  o=o||{};
+  const cl=(v,m)=>Math.max(0,Math.min(m,Math.round(Number(v)||0))),str=v=>String(v==null?'':v).trim();
+  const crit={};for(const k in CRIT_MAX)crit[k]=orig?cl(o.criterios&&o.criterios[k],CRIT_MAX[k]):0;
+  const nota=Object.values(crit).reduce((a,b)=>a+b,0);
+  const alts=(Array.isArray(o.alternativas)?o.alternativas:[])
+    .map(a=>({frase:str(a&&a.frase).replace(/^["“]+|["”]+$/g,''),nota:cl(a&&a.nota,10),por_que:str(a&&a.por_que)}))
+    .filter(a=>a.frase&&a.frase.length<=90&&a.frase!==orig).slice(0,3);
+  let rod=str(o.rodape);
+  if(!rod.startsWith('🔁')||rod.length>45||hist.includes(rod)||/\bsig[ao]\b|seguir|follow/i.test(rod))rod=pickRodape(lib,hist,o.nicho);
+  const wa=o.marca_dagua_terceiro||{},a=wa.area||{};
+  let aiArea=null;
+  if(wa.detectada&&vid.videoWidth){
+    const f=v=>Math.max(0,Math.min(1000,Number(v)||0))/1000;
+    let x=f(a.x)*vid.videoWidth,y=f(a.y)*vid.videoHeight,w=f(a.w)*vid.videoWidth,h=f(a.h)*vid.videoHeight;
+    if(w>4&&h>4){const px=w*.2,py=h*.35;aiArea={x:Math.max(0,x-px),y:Math.max(0,y-py),w:w+2*px,h:h+2*py,src:'ia'};} // a IA estima: sobra de folga
+  }
+  const dur=vid.duration||0;let corte=Math.max(0,Math.min(5,Number(o.corte_inicio_seg)||0));if(dur-corte<5)corte=0;corte=Math.round(corte*10)/10;
+  return {assunto:str(o.assunto),nicho:str(o.nicho),emocao:str(o.emocao),nota_original:nota,criterios:crit,
+    frase_original:orig,frase_escolhida:'',alternativas:alts,rodape:rod,rodape_motivo:str(o.rodape_motivo),
+    marca_dagua_terceiro:{detectada:!!wa.detectada,area:{x:0,y:0,w:0,h:0}},legenda:str(o.legenda),
+    comentario_fixado:str(o.comentario_fixado),corte_inicio_seg:corte,alerta:str(o.alerta),por_que_original:str(o.por_que_original),_aiArea:aiArea};
+}
+function chooseFrase(p){
+  if(p.frase_original&&p.nota_original>=8)p.frase_escolhida=p.frase_original;
+  else{const b=[...p.alternativas].sort((x,y)=>y.nota-x.nota)[0];p.frase_escolhida=b?b.frase:p.frase_original;}
+  return p;
+}
+function planPublic(p){const o={...p};delete o._aiArea;delete o.por_que_original;return o;}
+async function connectionPlan(orig){
+  const seq=++planSeq;orig=String(orig||'').trim();
+  state.plan=null;if(!(state.wm&&state.wm.src==='manual'))state.wm=null;
+  const lib=rodapeLib(),hist=rodapeHist();
+  state.rodape=state.rodape||pickRodape(lib,hist,'');
+  renderPlan('loading');
+  if(!sample)sample=await getAI();
+  const ocrP=detectWatermarkOCR();
+  const fim=async(st,e)=>{const ocr=await ocrP;if(seq!==planSeq)return null;if(ocr&&!(state.wm&&state.wm.src==='manual'))state.wm=ocr;renderPlan(st,e);return null;};
+  if(!sample||!sampleOk)return fim('off');
+  planCtl?.abort();planCtl=new AbortController();
+  let imgs=[];
+  try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(7,lim.images.maxCount||1));}catch(e){}
+  const fala=await falaCtx(),p=curProf();
+  const perfil=String(p.about||'').trim()||'cristão, empresário, negócios, IA e mentalidade';
+  const libTxt=Object.entries(lib).map(([k,v])=>k+':\n'+v.map(x=>'- '+x).join('\n')).join('\n');
+  const prompt=
+    'Você é o motor de conexão do perfil '+p.handle+' ('+perfil+'). Público provável: 18 a 34 anos, Brasil. '+
+    'O formato é um card: cabeçalho do perfil, frase gancho no topo, o vídeo no centro e um rodapé de repost embaixo.\n'+
+    framesNote(imgs.length)+userCtx()+fala+
+    (orig?'Frase que já está no vídeo (copiada exatamente): "'+orig.replace(/"/g,"'")+'"\n':'O vídeo NÃO tem frase própria no topo.\n')+
+    '\nPASSO A — Entenda: assunto central, emoção dominante, nicho e público.\n'+
+    'PASSO B — Nota de conexão da frase do vídeo (0 a 10), somando os critérios: identificacao (0 a 3: a pessoa pensa "isso sou eu"?), '+
+    'envio (0 a 2: pensa "isso é pra fulano"?), clareza (0 a 2: entende em 2 segundos sem ver o vídeo?), emocao (0 a 2: orgulho, riso, indignação ou inspiração?), '+
+    'coerencia (0 a 1: combina com '+perfil+'?). Sem frase própria, todos os critérios são 0.\n'+
+    'PASSO C — Nota 8 ou mais: mantenha a frase, explique em "por_que_original" por que funciona e deixe "alternativas" vazio. '+
+    'Nota abaixo de 8: escreva 3 alternativas mais fortes, cada uma com a nota estimada e "por_que" (uma linha dizendo o que melhorou). '+
+    'Padrões que geram conexão: "Eu quando…"/"Você quando…" (identificação), "Manda pra quem…"/"Marca aquele amigo que…" (envio), '+
+    '"Ninguém fala sobre…" (curiosidade), "Quando você entende que…" (virada de chave). '+
+    'Regras das frases: no máximo 90 caracteres, linguagem natural de brasileiro, sem clichê de coach, sem palavrão, nada que contradiga a fé cristã.\n'+
+    'PASSO D — Planeje o card:\n'+
+    '• "rodape": escolha da biblioteca abaixo a frase que mais combina com o NICHO e o ASSUNTO. '+
+    (hist.length?'Não use nenhuma destas, usadas nos últimos vídeos: '+hist.map(x=>'"'+x+'"').join(', ')+'. ':'')+
+    'Se nenhuma encaixar bem, crie uma no mesmo estilo (começa com 🔁, no máximo 45 caracteres). O rodapé NUNCA pede para seguir. Explique em "rodape_motivo".\n'+
+    'Biblioteca de rodapés:\n'+libTxt+'\n'+
+    '• "legenda": gancho na primeira linha, 2 ou 3 parágrafos curtos, CTA final com UMA única ação (comentar, OU marcar, OU seguir), e exatamente 3 hashtags no fim. Não coloque crédito de autor.\n'+
+    '• "comentario_fixado": um comentário curto para fixar que puxa conversa.\n'+
+    '• "corte_inicio_seg": segundo em que o vídeo deve começar para prender nos 2 primeiros segundos (0 se o começo já é bom; nunca corte uma fala no meio; no máximo 5).\n'+
+    '• "marca_dagua_terceiro": procure, DENTRO da cena do vídeo, textos como "Siga o @…", "@perfil" ou logos de outros perfis. '+
+    'Ignore o cabeçalho de perfil e a frase do topo do repost (eles não vão para o card). Se achar, "detectada": true e "area" com x, y, w, h em milésimos do quadro inteiro (0 a 1000).\n'+
+    '• "alerta": se o vídeo não combinar com o perfil (palavrão, algo contra a fé, nicho fora), explique em uma linha; senão "".\n\n'+
+    'Responda só com JSON: {"assunto":"","nicho":"","emocao":"","nota_original":0,"criterios":{"identificacao":0,"envio":0,"clareza":0,"emocao":0,"coerencia":0},'+
+    '"frase_original":"","frase_escolhida":"","por_que_original":"","alternativas":[{"frase":"","nota":0,"por_que":""}],"rodape":"","rodape_motivo":"",'+
+    '"marca_dagua_terceiro":{"detectada":false,"area":{"x":0,"y":0,"w":0,"h":0}},"legenda":"","comentario_fixado":"","corte_inicio_seg":0,"alerta":""}';
+  let out;
+  try{out=await sample.json(prompt,{images:imgs.length?imgs:undefined,signal:planCtl.signal,cache:false});}
+  catch(e){
+    if(e&&e.code==='cancelled')return null;
+    if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e&&e.code))sampleOk=false;
+    return fim('err',e);
+  }
+  if(seq!==planSeq)return null;
+  let plan=normalizePlan(out,orig,lib,hist);
+  // nota abaixo de 8 sempre com 3 alternativas
+  for(let tent=0;(plan.nota_original<8)&&plan.alternativas.length<3&&tent<2;tent++){
+    try{
+      const falta=3-plan.alternativas.length;
+      const more=await sample.json(voz()+'\nAssunto do vídeo: '+(plan.assunto||'?')+'. Emoção: '+(plan.emocao||'?')+'.\n'+
+        (orig?'Frase atual do vídeo: "'+orig.replace(/"/g,"'")+'" (nota '+plan.nota_original+').\n':'O vídeo não tem frase.\n')+
+        (plan.alternativas.length?'Já temos: '+plan.alternativas.map(a=>'"'+a.frase+'"').join(', ')+'.\n':'')+
+        'Crie mais '+falta+' frase(s) de topo mais fortes, diferentes das que já temos, no máximo 90 caracteres, com nota estimada (0 a 10) e uma linha dizendo o que melhorou. '+
+        'Responda só com JSON: {"alternativas":[{"frase":"","nota":0,"por_que":""}]}',{cache:false});
+      const extra=normalizePlan({...out,alternativas:[...plan.alternativas,...((more&&more.alternativas)||[])]},orig,lib,hist).alternativas;
+      plan.alternativas=extra.filter((a,i,arr)=>arr.findIndex(b=>b.frase===a.frase)===i).slice(0,3);
+    }catch(e){break;}
+  }
+  if(seq!==planSeq)return null;
+  plan=chooseFrase(plan);
+  // marca d'água: área marcada por você > OCR (preciso) > estimativa da IA
+  const ocr=await ocrP;if(seq!==planSeq)return null;
+  if(!(state.wm&&state.wm.src==='manual'))state.wm=ocr||plan._aiArea||null;
+  const wm=state.wm;
+  plan.marca_dagua_terceiro={detectada:!!wm,area:wm?{x:Math.round(wm.x),y:Math.round(wm.y),w:Math.round(wm.w),h:Math.round(wm.h)}:{x:0,y:0,w:0,h:0}};
+  state.plan=plan;state.rodape=plan.rodape;state.corte=plan.corte_inicio_seg;
+  $('txt').value=plan.frase_escolhida;
+  window.estudioUltimoPlano=planPublic(plan); // para conferir o JSON no console
+  renderPlan('ok');
+  return plan;
+}
+function notaDe(frase){const p=state.plan;if(!p)return null;if(frase===p.frase_original)return p.nota_original;const a=p.alternativas.find(x=>x.frase===frase);return a?a.nota:null;}
+function updateWmMsg(){
+  const m=$('wmMsg');if(!m)return;
+  m.textContent=!state.wm?'Nenhuma marca encontrada':state.wm.src==='manual'?'Área marcada por você: o selo cobre':"Marca d'água de terceiro detectada e coberta";
+}
+function renderRodSel(){
+  const sel=$('rodSel'),lib=rodapeLib();sel.textContent='';
+  for(const [k,v] of Object.entries(lib)){const g=document.createElement('optgroup');g.label=k;for(const x of v){const o=document.createElement('option');o.value=o.textContent=x;g.appendChild(o);}sel.appendChild(g);}
+  if(state.rodape&&![...sel.options].some(o=>o.value===state.rodape)){const o=document.createElement('option');o.value=o.textContent=state.rodape;sel.prepend(o);}
+  sel.value=state.rodape||'';
+}
+function renderPlan(st,err){
+  $('planSec').hidden=false;const p=state.plan,ps=$('planStatus');
+  renderRodSel();updateWmMsg();$('cutIn').value=String(state.corte||0);
+  if(st==='loading'){$('scBefore').textContent='…';$('scAfter').textContent='…';$('crit').textContent='';$('altList').textContent='';$('planWhy').textContent='';
+    ps.className='status';ps.textContent="Analisando a conexão: assunto, nota, frase, rodapé e marca d'água…";return;}
+  if(!p){
+    $('scBefore').textContent='–';$('scAfter').textContent='–';
+    ps.className='status warn';ps.textContent=st==='off'?'IA desligada: o card sai com a frase do vídeo, o selo e um rodapé padrão.'+OFF_HINT:'A IA não respondeu. O card sai com a frase do vídeo, o selo e um rodapé padrão. Toque em Analisar de novo.';
+    return;
+  }
+  const depois=notaDe($('txt').value.trim());
+  $('scBefore').textContent=p.frase_original?String(p.nota_original):'–';$('scAfter').textContent=depois==null?'–':String(depois);
+  $('crit').textContent=p.frase_original?Object.keys(CRIT_MAX).map(k=>CRIT_NOME[k]+' '+p.criterios[k]+'/'+CRIT_MAX[k]).join(' · '):'O vídeo não tem frase própria: a frase foi criada.';
+  $('planWhy').textContent=(p.assunto?'Assunto: '+p.assunto+(p.nicho?' · Nicho: '+p.nicho:'')+(p.emocao?' · Emoção: '+p.emocao:'')+'. ':'')+
+    (p.frase_original&&p.nota_original>=8?'Nota 8 ou mais: a frase original foi mantida. '+(p.por_que_original||''):'Nota abaixo de 8: a melhor alternativa já foi aplicada. Toque em outra para trocar.');
+  const box=$('altList');box.textContent='';
+  const add=(label,f,nota,why)=>{
+    const b=document.createElement('button');b.type='button';b.className='sug';b.setAttribute('aria-pressed',$('txt').value.trim()===f);
+    const e=document.createElement('em');e.textContent=label+' · nota '+nota;const t=document.createElement('b');t.textContent=f;b.append(e,t);
+    if(why){const sp=document.createElement('span');sp.textContent=why;b.appendChild(sp);}
+    b.onclick=()=>{$('txt').value=f;$('txt').dataset.touched='1';renderPlan('ok');};box.appendChild(b);
+  };
+  if(p.frase_original)add('Original',p.frase_original,p.nota_original,'');
+  p.alternativas.forEach((a,i)=>add('Alternativa '+(i+1),a.frase,a.nota,a.por_que));
+  $('planAlert').hidden=!p.alerta;$('planAlert').textContent=p.alerta?'Alerta: '+p.alerta:'';
+  $('rodWhy').textContent=p.rodape_motivo||'';
+  $('cutWhy').textContent=state.corte?'pula a introdução para prender nos 2 primeiros segundos':'';
+  if(!$('planLeg').dataset.edited)$('planLeg').value=p.legenda;
+  if(!$('planCom').dataset.edited)$('planCom').value=p.comentario_fixado;
+  ps.className='status ok';ps.textContent='Card planejado. Confira e toque em Gerar vídeo.';
+}
+$('rodSel').onchange=e=>{state.rodape=e.target.value;if(state.plan)state.plan.rodape=state.rodape;};
+$('rodSwap').onclick=()=>{
+  const lib=rodapeLib(),hist=rodapeHist(),all=Object.values(lib).flat();
+  const cat=Object.keys(lib).find(k=>lib[k].includes(state.rodape));
+  const pool=[...(cat?lib[cat]:[]),...all].filter((x,i,a)=>a.indexOf(x)===i&&x!==state.rodape&&!hist.includes(x));
+  if(!pool.length)return;
+  const i=(pool.indexOf(state.rodape)+1)%pool.length;state.rodape=pool[Math.max(0,i)];
+  if(state.plan){state.plan.rodape=state.rodape;state.plan.rodape_motivo='Trocado por você.';}
+  renderRodSel();$('rodWhy').textContent='Trocado por você.';
+};
+$('cutIn').onchange=e=>{const v=Math.max(0,Math.min(Math.max(0,(vid.duration||0)-3),parseFloat(String(e.target.value).replace(',','.'))||0));state.corte=Math.round(v*10)/10;e.target.value=String(state.corte);if(state.plan)state.plan.corte_inicio_seg=state.corte;};
+['planLeg','planCom'].forEach(id=>$(id).addEventListener('input',e=>{e.target.dataset.edited='1';}));
+$('copyLeg').onclick=()=>copyText($('planLeg').value,$('planStatus'),$('planLeg'));
+$('copyCom').onclick=()=>copyText($('planCom').value,$('planStatus'),$('planCom'));
+$('planAgain').onclick=()=>{delete $('planLeg').dataset.edited;delete $('planCom').dataset.edited;connectionPlan(lastOrig);};
+$('planGo').onclick=()=>exportCard();
+$('txt').addEventListener('input',()=>{if(state.plan){const d=notaDe($('txt').value.trim());$('scAfter').textContent=d==null?'–':String(d);}});
 
 /* ---------- sugestões de frase / ideias quando não há frase ---------- */
 let sugCtl=null,lastOrig='';
@@ -954,7 +1237,7 @@ async function genSuggestions(orig){
   }
 }
 $('moreSug').onclick=()=>genSuggestions(lastOrig);
-$('ctxIn').addEventListener('change',()=>{if(state.hasVideo&&!lastOrig&&$('ctxIn').value.trim()){delete $('txt').dataset.touched;genSuggestions(lastOrig);}});
+$('ctxIn').addEventListener('change',()=>{if(state.hasVideo&&$('ctxIn').value.trim())connectionPlan(lastOrig);});
 $('txt').addEventListener('input',e=>{e.target.dataset.touched='1';});
 
 /* ---------- carregar vídeo ---------- */
@@ -965,6 +1248,7 @@ async function loadVideo(file,opts={}){
   state.hasVideo=false;state.scene=null;state.text=null;state.mapFrame=null;$('mapBox').hidden=true;
   $('exportBtn').disabled=true;$('readBtn').disabled=true;$('playBtn').disabled=true;
   delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';lastOrig='';
+  planSeq++;state.plan=null;state.wm=null;state.corte=0;state.rodape='';$('planSec').hidden=true;
   const seq=state.loadSeq=(state.loadSeq||0)+1;state.transcript='';
   if(!opts.noAI&&transcriber()){showTranscript({state:'loading'});
     state.trP=transcribe(file).then(r=>{if(state.loadSeq===seq){state.transcript=r.text||'';showTranscript(r);}return r;});}
@@ -992,13 +1276,13 @@ async function loadVideo(file,opts={}){
   $('exportBtn').disabled=false;$('playBtn').disabled=false;$('readBtn').disabled=false;
   $('meta').textContent=`1080 × 1920 · ${Math.round(vid.duration)} s · origem ${vid.videoWidth}×${vid.videoHeight}`;
   if(opts.noAI)state.pipeP=Promise.resolve(null);
-  else if(state.text)state.pipeP=readText();
-  else{$('ocrStatus').className='status';$('ocrStatus').textContent='Esse vídeo não tem frase. Criando ideias a partir da cena…';state.pipeP=genSuggestions('');}
+  else if(state.text)state.pipeP=planAfterRead();
+  else{$('ocrStatus').className='status';$('ocrStatus').textContent='Esse vídeo não tem frase. A IA vai criar uma.';state.pipeP=connectionPlan('');}
   return true;
 }
 $('pickVid').onclick=()=>$('vidIn').click();
 $('vidIn').onchange=e=>{loadVideo(e.target.files[0]);e.target.value='';};
-$('reAnalyze').onclick=async()=>{if(state.hasVideo&&!state.exporting){await analyze();if(state.text)readText();}};
+$('reAnalyze').onclick=async()=>{if(state.hasVideo&&!state.exporting){await analyze();if(state.text)planAfterRead();else connectionPlan('');}};
 $('playBtn').onclick=()=>{if(state.paused){vid.play().catch(()=>{});state.paused=false;$('playBtn').textContent='Pausar prévia';}else{vid.pause();state.paused=true;$('playBtn').textContent='Tocar prévia';}};
 $('zoom').oninput=e=>{state.zoom=e.target.value/100;$('zoomV').textContent=e.target.value+'%';};
 $('pos').oninput=e=>{state.pos=e.target.value/100;$('posV').textContent=e.target.value<35?'topo':e.target.value>65?'base':'centro';};
@@ -1067,7 +1351,8 @@ async function openMp4(file){
 }
 async function renderFrames(src,opts){
   if(!window.Mp4Muxer)await loadScript(MUXER_JS);
-  const fps=OUT_FPS,step=1e6/fps,total=Math.max(1,Math.round(src.dur*fps));
+  const s0=Math.max(0,Math.min(Number(opts.start)||0,src.dur-1)),s0us=s0*1e6; // corte de início
+  const fps=OUT_FPS,step=1e6/fps,total=Math.max(1,Math.round((src.dur-s0)*fps));
   const au=src.audio,pcm=au&&au.mode==='encode'?au.pcm:null,nc=pcm?Math.min(2,pcm.numberOfChannels):au?au.channels:0;
   const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),fastStart:'in-memory',firstTimestampBehavior:'offset',
     video:{codec:'avc',width:W,height:H,frameRate:fps},audio:au?{codec:'aac',numberOfChannels:nc,sampleRate:pcm?pcm.sampleRate:au.sampleRate}:undefined});
@@ -1081,11 +1366,11 @@ async function renderFrames(src,opts){
   const layer=document.createElement('canvas');layer.width=W;layer.height=H;layer.getContext('2d').drawImage(cv,0,0);
   const L=state.layout;
   let k=0,prev=null,first=null;
-  const emit=()=>{ctx.drawImage(layer,0,0);ctx.drawImage(prev,L.sx,L.sy,L.sw,L.sh,0,L.by,W,L.bh);const vf=new VideoFrame(cv,{timestamp:Math.round(k*step),duration:Math.round(step)});enc.encode(vf,{keyFrame:k%(fps*2)===0});vf.close();k++;};
+  const emit=()=>{ctx.drawImage(layer,0,0);ctx.drawImage(prev,L.sx,L.sy,L.sw,L.sh,0,L.by,W,L.bh);drawSelo();const vf=new VideoFrame(cv,{timestamp:Math.round(k*step),duration:Math.round(step)});enc.encode(vf,{keyFrame:k%(fps*2)===0});vf.close();k++;};
   const dec=new VideoDecoder({output:f=>{
       if(first===null)first=f.timestamp;
       const rel=f.timestamp-first;
-      while(prev&&k<total&&k*step<rel)emit(); // quadros de saída antes deste usam o quadro anterior
+      while(prev&&k<total&&s0us+k*step<rel)emit(); // quadros de saída antes deste usam o quadro anterior
       if(prev)prev.close();prev=f;
     },error:e=>{fail=e;}});
   dec.configure(src.config);
@@ -1107,8 +1392,8 @@ async function renderFrames(src,opts){
   if(au&&au.mode==='copy'){ // AAC original copiado como está, cortado na duração do vídeo
     const end=src.dur*1e6;let firstA=true;
     for(const x of au.samples){
-      const ts=Math.round(x.cts*1e6/x.timescale);if(ts>=end)break;
-      muxer.addAudioChunkRaw(new Uint8Array(x.data),'key',ts,Math.round(x.duration*1e6/x.timescale),
+      const ts=Math.round(x.cts*1e6/x.timescale);if(ts<s0us)continue;if(ts>=end)break;
+      muxer.addAudioChunkRaw(new Uint8Array(x.data),'key',ts-s0us,Math.round(x.duration*1e6/x.timescale),
         firstA?{decoderConfig:{codec:au.codec,sampleRate:au.sampleRate,numberOfChannels:au.channels,description:au.asc}}:undefined);
       firstA=false;
     }
@@ -1116,10 +1401,10 @@ async function renderFrames(src,opts){
   if(pcm){ // áudio que não é AAC → decodificado e recodificado em AAC, cortado na duração do vídeo
     const aenc=new AudioEncoder({output:(c,m)=>muxer.addAudioChunk(c,m),error:e=>{fail=e;}});
     aenc.configure({...AAC,sampleRate:pcm.sampleRate,numberOfChannels:nc});
-    const len=Math.min(pcm.length,Math.round(src.dur*pcm.sampleRate)),N=4096,ch=[...Array(nc)].map((_,c)=>pcm.getChannelData(c));
-    for(let i=0;i<len;i+=N){
+    const len=Math.min(pcm.length,Math.round(src.dur*pcm.sampleRate)),N=4096,ch=[...Array(nc)].map((_,c)=>pcm.getChannelData(c)),i0=Math.round(s0*pcm.sampleRate);
+    for(let i=i0;i<len;i+=N){
       const n=Math.min(N,len-i),data=new Float32Array(n*nc);for(let c=0;c<nc;c++)data.set(ch[c].subarray(i,i+n),c*n);
-      const ad=new AudioData({format:'f32-planar',sampleRate:pcm.sampleRate,numberOfFrames:n,numberOfChannels:nc,timestamp:Math.round(i*1e6/pcm.sampleRate),data});
+      const ad=new AudioData({format:'f32-planar',sampleRate:pcm.sampleRate,numberOfFrames:n,numberOfChannels:nc,timestamp:Math.round((i-i0)*1e6/pcm.sampleRate),data});
       aenc.encode(ad);ad.close();
       while(aenc.encodeQueueSize>16)await new Promise(r=>aenc.addEventListener('dequeue',r,{once:true}));
     }
@@ -1133,13 +1418,9 @@ async function renderFrames(src,opts){
 async function exportFrames(src,opts){
   state.exporting=true;$('exportBtn').disabled=true;$('result').hidden=true;setStatus('Gerando quadro a quadro…');
   vid.pause();
-  const phrase=$('txt').value.trim();
-  const capImgs=await captionImages();
-  const pf=curProf();
-  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
-  if(!opts.noCaption)job.capP=genCaption(job);
+  const job=await makeJob(opts);
   let blob;
-  try{blob=await renderFrames(src,{onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
+  try{blob=await renderFrames(src,{start:state.corte||0,onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
   catch(e){state.exporting=false;$('exportBtn').disabled=false;setStatus('Não consegui gerar o vídeo: '+((e&&e.message)||e),'warn');draw();return null;}
   state.blob=blob;state.ext='mp4';
   addOutput(blob,'mp4',job);$('bar').style.width='100%';
@@ -1148,13 +1429,24 @@ async function exportFrames(src,opts){
   if(!state.paused&&!opts.noPreview)vid.play().catch(()=>{});
   return {blob,ext:'mp4',job};
 }
+async function makeJob(opts){
+  const phrase=$('txt').value.trim();
+  const capImgs=await captionImages();
+  const pf=curProf();
+  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
+  const leg=state.plan?($('planLeg').value.trim()||state.plan.legenda):'';
+  if(!opts.noCaption&&leg){job.caption=leg;job.captions=[{label:'Plano',text:leg}];job.capState='ok';job.comentario=$('planCom').value.trim();}
+  else if(!opts.noCaption)job.capP=genCaption(job);
+  return job;
+}
 // Gera o MP4 do card. Devolve {blob,ext,job} ou null (o motivo fica em #status).
-// opts.noCaption: não gera legenda (re-render na revisão); opts.onProgress(0..1).
+// opts.noCaption: não gera legenda (re-render na revisão); opts.onProgress(0..1); opts.numero: nº no VPR (histórico do rodapé).
 async function exportCard(opts={}){
   if(state.exporting||!state.hasVideo||state.analyzing)return null;
   const src=await openMp4(state.srcFile);
-  if(src)return exportFrames(src,opts);
-  return exportLive(opts);
+  const r=src?await exportFrames(src,opts):await exportLive(opts);
+  if(r&&state.rodape&&!opts.noCaption)pushRodapeHist(state.rodape,opts.numero);
+  return r;
 }
 // reserva: grava em tempo real (navegador sem WebCodecs ou vídeo que não é MP4)
 async function exportLive(opts={}){
@@ -1166,13 +1458,9 @@ async function exportLive(opts={}){
   const rec=new MediaRecorder(stream,{mimeType:mime.m,videoBitsPerSecond:8000000});
   const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
   const done=new Promise(r=>rec.onstop=r);
-  vid.pause();vid.loop=false;vid.muted=!$('keepAudio').checked;await seekTo(0);
+  vid.pause();vid.loop=false;vid.muted=!$('keepAudio').checked;await seekTo(state.corte||0);
   draw();
-  const phrase=$('txt').value.trim();
-  const capImgs=await captionImages();
-  const pf=curProf();
-  const job={phrase,imgs:capImgs,ctx:state.videoCtx||'',userCtx:userCtx(),falaP:falaCtx(),prof:{handle:pf.handle,about:pf.about||''},caption:'',captions:[],capSel:0,capState:opts.noCaption?'err':'loading',capMsg:''};
-  if(!opts.noCaption)job.capP=genCaption(job);
+  const job=await makeJob(opts);
   rec.start(250);
   // conta quadros e vigia a aba: em segundo plano o navegador para de desenhar e o vídeo sai congelado
   let frames=0,sumiu=false;const onVis=()=>{if(document.hidden)sumiu=true;};document.addEventListener('visibilitychange',onVis);
@@ -1504,6 +1792,7 @@ async function baixarEntrada(sb,v){
 // libera memória entre vídeos (no iPhone já houve crash em vídeo longo)
 function freeMemory(){
   state.shots=[];state.mapFrame=null;state.hasVideo=false;state.transcript='';state.trP=null;state.pipeP=null;state.srcFile=null;state.frameSrc=null;
+  state.plan=null;state.wm=null;state.corte=0;state.rodape='';
   try{vid.pause();vid.removeAttribute('src');vid.load();}catch(e){}
   if(srcUrl){URL.revokeObjectURL(srcUrl);srcUrl=null;}
   map.width=map.height=1;$('mapBox').hidden=true;
@@ -1521,13 +1810,14 @@ async function autoProcess(sb,v){
   delete $('txt').dataset.touched;
   if(!await loadVideo(file))throw new Error($('anStatus').textContent||'Não consegui abrir o vídeo.');
   if(IS_IOS&&vid.duration>90)autoWarn(`video-${N} tem ${Math.round(vid.duration)} s: no iPhone, vídeos acima de 90 s podem travar. Se travar, rode o modo automático no Mac.`);
-  setStep('Copiando a frase do vídeo',30);
-  const r=await state.pipeP;
-  if(!r||!r.list||!r.list.length)throw new Error('Frases: '+($('sugStatus').textContent||'a IA não respondeu'));
-  const best=r.list[r.best]||r.list[0],alts=r.list.filter(x=>x!==best).map(x=>x.texto);
+  setStep('Analisando a conexão',30);
+  const plan=await state.pipeP;
+  if(!plan||!plan.frase_escolhida)throw new Error('Frases: '+($('planStatus').textContent||'a IA não respondeu'));
+  const best={texto:plan.frase_escolhida};
+  const alts=[...(plan.frase_original&&plan.frase_original!==plan.frase_escolhida?[plan.frase_original]:[]),...plan.alternativas.map(a=>a.frase).filter(f=>f!==plan.frase_escolhida)].slice(0,3);
   $('txt').value=best.texto;
   setStep('Renderizando o card',45);
-  const out=await exportCard({noPreview:true,onProgress:f=>setStep('Renderizando o card',45+f*40)});
+  const out=await exportCard({noPreview:true,numero:N,onProgress:f=>setStep('Renderizando o card',45+f*40)});
   if(!out)throw new Error('Render: '+$('status').textContent);
   if(out.ext!=='mp4')throw new Error('Este navegador gerou WebM; o VPR precisa de MP4. Use o Safari ou o Chrome atualizado.');
   setStep('Escrevendo a legenda',88);
@@ -1545,7 +1835,9 @@ async function autoProcess(sb,v){
   const upd={status:'pronto',arquivo_pronto:`prontos/video-${N}.mp4`,legenda:leg,frases_alternativas:alts,erro_msg:null};
   if(!v.conta_id){const c=await contaPadrao(sb);if(c)upd.conta_id=c;}
   if(v.ordem==null)upd.ordem=Date.now();
-  const {error}=await sb.from('videos').update(upd).eq('id',v.id);
+  // colunas novas (supabase/estudio.sql); se ainda não existirem, grava sem elas
+  let {error}=await sb.from('videos').update({...upd,comentario_fixado:plan.comentario_fixado||null,conexao:planPublic(plan)}).eq('id',v.id);
+  if(error&&/column|schema/i.test(error.message||''))({error}=await sb.from('videos').update(upd).eq('id',v.id));
   if(error)throw new Error('Banco: '+error.message);
   const fr=lsGet(VPR_FRASES)||{};fr[N]=best.texto;lsSet(VPR_FRASES,fr);
   setStep('Pronto: video-'+N,100);
@@ -1725,7 +2017,7 @@ async function vprRefresh(){
   const c=vprCfg();$('autoSec').hidden=IN_VIEWER||!(c.url&&c.anon);
   if($('autoSec').hidden)return;
   const u=await vprUser();const st=$('vprStatus');
-  if(u){st.className='status ok';st.textContent='Conectado como '+u.email+'.';try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}autoUI();resumeHourly();}
+  if(u){st.className='status ok';st.textContent='Conectado como '+u.email+'.';cloudLoad();try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}autoUI();resumeHourly();}
   else{st.className='status warn';st.textContent='Não conectado: preencha e toque em Conectar.';$('autoFila').textContent='—';}
 }
 $('vprLogin').onclick=async()=>{
@@ -1758,7 +2050,7 @@ $('vprLogout').onclick=async()=>{
 };
 
 /* ---------- menu lateral (⋮) ---------- */
-const VIEWS={leg:'Legendas geradas',perfis:'Perfis',vpr:'Conexão VPR',cfg:'Configurações',conta:'Conta'};
+const VIEWS={leg:'Legendas geradas',card:'Card, selo e rodapés',perfis:'Perfis',vpr:'Conexão VPR',cfg:'Configurações',conta:'Conta'};
 let drawerFrom=null;
 function showView(v){
   $('drMenu').hidden=!!v;$('drBack').hidden=!v;$('drTitle').textContent=v?VIEWS[v]:'Menu';
@@ -1766,6 +2058,7 @@ function showView(v){
   if(v==='leg')renderLegendas();
   if(v==='perfis'){renderProfList();$('profForm').hidden=true;$('newProf').hidden=false;$('profStatus').textContent='';}
   if(v==='cfg')refreshCfgUI();
+  if(v==='card'){fillCardCfg();$('cfgCardStatus').textContent='';cloudLoad().then(r=>{fillCardCfg();$('cfgCardStatus').className=r==='cloud'?'status ok':'status';$('cfgCardStatus').textContent=r==='cloud'?'Carregado do Supabase.':'';});}
   if(v==='vpr'){vprFormFill();vprRefresh();}
   if(v==='conta'){const x=lsGet(SES_KEY)||{};$('contaMail2').textContent=x.email||'';
     $('contaMode').textContent=x.mode==='server'?'Login pelo servidor: a senha e a chave da IA ficam na Vercel.':'Login só neste aparelho (o servidor não respondeu quando você entrou).';}
@@ -1782,9 +2075,73 @@ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dat
 if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;$('navVpr').hidden=true;}
 $('manageProf').onclick=()=>openDrawer('perfis');
 
+/* ---------- card: nome e @ do cabeçalho, @ do selo e biblioteca de rodapés ---------- */
+const ROD_KEY='estudioCards.rodapes',ROD_HIST='estudioCards.rodapes.hist',SELO_KEY='estudioCards.selo';
+const DEFAULT_RODAPES={
+  'Mentalidade / ambição':['🔁 Reposta se isso é você','🔁 Deixa no seu perfil pra lembrar todo dia','🔁 Reposta pra quem não aceita o confortável'],
+  'Dinheiro / negócios':['🔁 Reposta pra quem tá construindo algo grande','🔁 Manda pro seu sócio','🔁 Reposta se você pensa igual'],
+  'Fé / propósito':['🔁 Reposta pra quem precisa ouvir isso hoje','🔁 Deixa no seu perfil como lembrete','🔁 Manda pra quem tá passando por isso'],
+  'Superação / resiliência':['🔁 Reposta pra quem nunca desistiu','🔁 Manda pra quem levanta sempre'],
+  'Humor / identificação':['🔁 Marca quem faz isso','🔁 Reposta se você já passou por isso']
+};
+function rodapeLib(){const l=lsGet(ROD_KEY);return l&&typeof l==='object'&&Object.values(l).some(v=>Array.isArray(v)&&v.length)?l:DEFAULT_RODAPES;}
+function rodapeHist(){return (lsGet(ROD_HIST)||[]).slice(0,5);}
+function libToText(l){return Object.entries(l).map(([k,v])=>k+'\n'+v.join('\n')).join('\n\n');}
+function textToLib(t){
+  const out={};let cat='Outros';
+  for(const raw of String(t).split('\n')){const l=raw.trim();if(!l)continue;
+    if(l.startsWith('🔁'))(out[cat]=out[cat]||[]).push(l.slice(0,47));else cat=l.replace(/:$/,'');}
+  return out;
+}
+function seloHandle(){let h=String(lsGet(SELO_KEY)||'').trim()||curProf().handle||'@ojhonatta1';if(!h.startsWith('@'))h='@'+h;return h;}
+async function cloudCtx(){try{if(IN_VIEWER||!vprCfg().url)return null;const u=await vprUser();if(!u)return null;return {sb:await vprClient(),u};}catch(e){return null;}}
+function pushRodapeHist(r,numero){
+  lsSet(ROD_HIST,[r,...rodapeHist().filter(x=>x!==r)].slice(0,5));
+  cloudCtx().then(c=>c&&c.sb.from('estudio_rodapes_hist').insert({rodape:r,numero:numero||null})).catch(()=>{});
+}
+const mainProf=()=>profiles.find(x=>x.id==='jhonatta')||profiles[0];
+async function cloudLoad(){ // 'cloud' | 'nosql' (tabelas ainda não criadas) | 'local'
+  const c=await cloudCtx();if(!c)return 'local';
+  try{
+    const {data,error}=await c.sb.from('estudio_config').select('*').eq('user_id',c.u.id).maybeSingle();if(error)throw error;
+    if(data){
+      const m=mainProf();if(m){if(data.nome)m.name=data.nome;if(data.handle)m.handle=data.handle;lsSet(PROF_KEY,profiles);}
+      lsSet(SELO_KEY,data.selo_handle||'');
+      if(data.rodapes&&Object.values(data.rodapes).some(v=>Array.isArray(v)&&v.length))lsSet(ROD_KEY,data.rodapes);
+    }
+    const {data:h}=await c.sb.from('estudio_rodapes_hist').select('rodape').order('created_at',{ascending:false}).limit(20);
+    if(h&&h.length)lsSet(ROD_HIST,[...new Set(h.map(x=>x.rodape))].slice(0,5));
+    renderProfSel();applyProfile();return 'cloud';
+  }catch(e){return 'nosql';}
+}
+async function cloudSave(){
+  const c=await cloudCtx();if(!c)return 'local';const m=mainProf();
+  try{
+    const {error}=await c.sb.from('estudio_config').upsert({user_id:c.u.id,nome:m.name,handle:m.handle,selo_handle:lsGet(SELO_KEY)||null,rodapes:rodapeLib(),updated_at:new Date().toISOString()});
+    if(error)throw error;return 'cloud';
+  }catch(e){return 'nosql';}
+}
+const CLOUD_MSG={cloud:'Salvo no Supabase (na sua conta).',nosql:'Salvo neste aparelho. Para salvar no Supabase, rode o arquivo supabase/estudio.sql no SQL Editor do Supabase.',local:'Salvo neste aparelho. Conecte o VPR (menu ⋮) para salvar no Supabase.'};
+function fillCardCfg(){
+  const m=mainProf();$('cfgNome').value=m?m.name:'';$('cfgHandle').value=m?m.handle:'';$('cfgSelo').value=lsGet(SELO_KEY)||'';
+  $('cfgRod').value=libToText(rodapeLib());$('cfgHist').textContent=rodapeHist().join(' · ')||'—';
+}
+$('cfgCardSave').onclick=async()=>{
+  const st=$('cfgCardStatus'),m=mainProf();
+  let h=$('cfgHandle').value.trim().replace(/\s+/g,'');if(h&&!h.startsWith('@'))h='@'+h;
+  if(!$('cfgNome').value.trim()||h.length<2){st.className='status warn';st.textContent='Preencha o nome e o @.';return;}
+  m.name=$('cfgNome').value.trim();m.handle=h;lsSet(PROF_KEY,profiles);
+  let sh=$('cfgSelo').value.trim().replace(/\s+/g,'');if(sh&&!sh.startsWith('@'))sh='@'+sh;lsSet(SELO_KEY,sh);
+  const lib=textToLib($('cfgRod').value);
+  if(!Object.keys(lib).length){st.className='status warn';st.textContent='A biblioteca ficou vazia. As frases precisam começar com 🔁.';return;}
+  lsSet(ROD_KEY,lib);renderProfSel();applyProfile();fillCardCfg();
+  st.className='status';st.textContent='Salvando…';const r=await cloudSave();st.className=r==='cloud'?'status ok':'status warn';st.textContent=CLOUD_MSG[r];
+};
+$('cfgRodReset').onclick=()=>{$('cfgRod').value=libToText(DEFAULT_RODAPES);};
+
 /* ---------- perfis: foto, nome, arroba, selo e o jeito de escrever ---------- */
 const PROF_KEY='estudioCards.perfis',CUR_KEY='estudioCards.perfilAtual';
-const BASE_PROF={id:'jhonatta',name:'Jhonatta • VPR MKT',handle:'@ojhonatta1',badge:true,avatar:'',about:''};
+const BASE_PROF={id:'jhonatta',name:'Jhonatta • Negócios e IA',handle:'@ojhonatta1',badge:true,avatar:'',about:''};
 let profiles=[],curId='',editId=null,editAv='';
 function loadProfiles(){
   profiles=lsGet(PROF_KEY);
@@ -1793,6 +2150,8 @@ function loadProfiles(){
     profiles=[{...BASE_PROF,name:d.name||BASE_PROF.name,handle:d.handle||BASE_PROF.handle,badge:typeof d.badge==='boolean'?d.badge:true,avatar:d.avatar||''}];
     lsSet(PROF_KEY,profiles);
   }
+  // nome antigo do perfil principal passa para o novo padrão
+  if(profiles.some(x=>x.name==='Jhonatta • VPR MKT')){profiles.forEach(x=>{if(x.name==='Jhonatta • VPR MKT')x.name=BASE_PROF.name;});lsSet(PROF_KEY,profiles);}
   curId=lsGet(CUR_KEY);if(!profiles.some(x=>x.id===curId))curId=profiles[0].id;
   renderProfSel();applyProfile();
 }
