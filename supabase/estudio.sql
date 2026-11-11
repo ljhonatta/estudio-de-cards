@@ -11,6 +11,9 @@ create table if not exists public.estudio_config (
   rodapes      jsonb not null default '{}'::jsonb,   -- {"Categoria": ["🔁 frase", ...]}
   updated_at   timestamptz not null default now()
 );
+-- interruptores do card (selo "Siga o @" e rodapé de repost)
+alter table public.estudio_config add column if not exists mostrar_selo   boolean not null default true;
+alter table public.estudio_config add column if not exists mostrar_rodape boolean not null default true;
 
 -- ------------------------------------------- histórico de rodapés usados
 -- O Estúdio lê os últimos 5 para não repetir o mesmo rodapé em vídeos seguidos.

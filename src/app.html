@@ -20,7 +20,7 @@ header.top{position:sticky;top:0;z-index:10;background:var(--bg);display:flex;al
 header.top>div{min-width:0}
 .menuBtn{flex:none;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--line);background:#1b1b1e;color:var(--fg);cursor:pointer}
 .menuBtn svg{width:22px;height:22px}
-@media (max-width:760px){header.top{padding:10px 0}header.top h1{font-size:18px}header.top .sub{display:none}}
+@media (max-width:760px){header.top{padding:10px 0}header.top h1{font-size:18px}header.top .sub{display:none}.tabs a{padding:7px 10px;font-size:13px}}
 .linkBtn{appearance:none;background:none;border:0;padding:0;color:var(--gold);font:inherit;font-weight:700;cursor:pointer;text-align:left}
 h1{font-family:var(--display);font-size:22px;letter-spacing:-.01em;margin:0;text-wrap:balance}
 h1 span{color:var(--gold)}
@@ -142,6 +142,24 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .capOpts button[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
 /* modo automático (VPR) */
 .autoTop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+/* abas Editor | Automático */
+.tabs{display:flex;gap:4px;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:4px;margin-left:auto;flex:none}
+.tabs a{padding:8px 14px;border-radius:9px;color:var(--muted);font-weight:700;font-size:14px;text-decoration:none;display:flex;align-items:center;gap:7px}
+.tabs a[aria-current=page]{background:#24221d;color:var(--gold)}
+.dot{width:8px;height:8px;border-radius:50%;background:#55555c;display:inline-block}
+.dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(111,208,140,.2)}
+/* página Automático */
+.autoPage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.autoPage .full{grid-column:1/-1}
+@media (max-width:760px){.autoPage{grid-template-columns:1fr}}
+.connRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12.5px;font-weight:700;background:#2a1d1d;color:#e7a0a0}
+.pill.on{background:#18241c;color:var(--green)}
+.nowRow{display:flex;gap:14px;align-items:flex-start}
+.nowRow>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.autoPrev{width:120px;flex:none;aspect-ratio:9/16;border-radius:10px;border:1px solid var(--line);background:#000;display:block}
+details.box{border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+details.box[open]{display:flex;flex-direction:column;gap:12px}
 .autoGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .autoGrid div{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;min-width:0}
 .autoGrid small{font-size:11.5px;color:var(--muted)}
@@ -153,7 +171,6 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .autoItem.err b{color:var(--warn)}
 .autoRev{display:flex;flex-direction:column;gap:8px;border:1px solid var(--gold);border-radius:12px;padding:12px}
 body.autoRun .manual{pointer-events:none;opacity:.55}
-#autoBtn[aria-pressed=true]{background:#18241c;color:var(--green);border-color:var(--green)}
 .trBox{font-size:13px}
 /* revisão de conexão */
 .score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -191,13 +208,17 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
   <header class="top">
     <div>
       <h1>Estúdio de Cards <span>· @ojhonatta1</span></h1>
-      <p class="sub">Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card em 1080×1920.</p>
+      <p class="sub" id="pageSub">Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card em 1080×1920.</p>
     </div>
+    <nav class="tabs" id="tabs" aria-label="Páginas">
+      <a href="#editor" data-page="editor">Editor</a>
+      <a href="#auto" data-page="auto">Automático <i class="dot" id="autoDot" aria-hidden="true"></i></a>
+    </nav>
     <button class="menuBtn" id="menuBtn" type="button" aria-label="Abrir menu" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
   </header>
   <div class="banner" id="aiBanner" hidden><span>A IA está desligada neste aparelho. Coloque a chave em Configurações para ler frases, criar ideias e escrever legendas.</span><button type="button" class="linkBtn" id="bannerCfg">Abrir configurações</button></div>
 
-  <div class="grid">
+  <div class="grid" id="pageEditor">
     <div class="stage">
       <div class="phone">
         <canvas id="cv" width="1080" height="1920" aria-label="Prévia do card"></canvas>
@@ -209,26 +230,6 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
     </div>
 
     <div class="panel">
-      <section class="sec" id="autoSec" hidden>
-        <h2>Modo automático · VPR Insta Full</h2>
-        <div class="autoTop">
-          <button class="btn gold" id="scanBtn" type="button">Rastrear e editar agora</button>
-          <button class="btn" id="autoBtn" type="button" aria-pressed="false">Ligar modo contínuo</button>
-        </div>
-        <label class="check"><input type="checkbox" id="hourly"> Rastrear sozinho a cada 1 hora (com o Estúdio aberto)</label>
-        <span class="status" id="autoState"></span>
-        <div class="autoGrid">
-          <div><small>Vídeo atual</small><b id="autoCur">—</b></div>
-          <div><small>Etapa</small><b id="autoStep">Parado</b></div>
-          <div><small>Na fila</small><b id="autoFila">—</b></div>
-        </div>
-        <div class="prog" aria-hidden="true"><i id="autoBar"></i></div>
-        <p class="hint" id="autoWarn"></p>
-        <div class="hint">Últimos prontos e erros (toque num pronto para revisar a frase)</div>
-        <div class="autoList" id="autoList"></div>
-        <button class="btn" id="retryErr" type="button">Devolver erros de edição para a fila</button>
-        <div class="autoRev" id="autoRev" hidden></div>
-      </section>
 
       <section class="sec manual">
         <h2>1 · Vídeo de referência</h2>
@@ -301,13 +302,14 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       </section>
 
       <section class="sec manual" id="planSec" hidden>
-        <h2>Conexão · revisão</h2>
+        <h2>3 · Revisão de conexão</h2>
         <div class="score"><b id="scBefore">–</b><span>→</span><b class="to" id="scAfter">–</b><small id="scInfo">nota de conexão (0 a 10): antes → depois</small></div>
         <div class="crit" id="crit"></div>
         <p class="hint" id="planWhy"></p>
         <div class="sugList" id="altList"></div>
         <p class="status warn" id="planAlert" hidden></p>
         <div class="kv"><span>Marca d'água</span><b id="wmMsg">—</b></div>
+        <div class="autoTop"><label class="check"><input type="checkbox" data-opt="selo"> Selo "Siga o @"</label><label class="check"><input type="checkbox" data-opt="rodape"> Rodapé de repost</label></div>
         <label class="f">Rodapé de repost
           <div class="inl"><select id="rodSel"></select><button class="btn" id="rodSwap" type="button">Trocar</button></div>
         </label>
@@ -324,7 +326,7 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       </section>
 
       <section class="sec manual">
-        <h2>3 · Perfil</h2>
+        <h2>4 · Perfil</h2>
         <label class="f">Perfil que vai no card e na legenda<select id="profSel"></select></label>
         <div class="file">
           <button class="btn" id="manageProf" type="button">Criar ou editar perfis</button>
@@ -334,7 +336,7 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       </section>
 
       <section class="sec manual">
-        <h2>4 · Exportar</h2>
+        <h2>5 · Exportar</h2>
         <button class="btn gold big" id="exportBtn" type="button" disabled>Gerar vídeo final</button>
         <div class="prog" aria-hidden="true"><i id="bar"></i></div>
         <div class="status" id="status">A exportação roda em tempo real: um vídeo de 15 s leva cerca de 15 s.</div>
@@ -347,8 +349,71 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
 
     </div>
   </div>
-</div>
 
+  <main class="autoPage" id="pageAuto" hidden>
+    <section class="sec">
+      <h2>Conexão com o VPR Insta Full</h2>
+      <div class="connRow"><span class="pill" id="connPill">Desconectado</span><b id="connWho"></b></div>
+      <p class="hint">O Estúdio pega os vídeos <b>na fila</b> do VPR, edita e devolve em <b>prontos/</b>. A conexão fica salva neste aparelho: não precisa conectar de novo.</p>
+      <details class="box" id="connForm">
+        <summary>Configurar conexão</summary>
+        <p class="hint">A URL e a chave anon estão no VPR: no Mac, abra <b>http://localhost:5056/config.js</b>, copie <b>tudo</b> (Cmd+A, Cmd+C) e cole no campo da chave. O Estúdio separa a URL e a chave sozinho.</p>
+        <label class="f">URL do Supabase<input type="url" id="vprUrl" spellcheck="false" placeholder="https://xxxx.supabase.co"></label>
+        <label class="f">Chave anon (pública) ou o config.js inteiro<input type="password" id="vprAnon" autocomplete="off" spellcheck="false"></label>
+        <label class="f">Bucket<input type="text" id="vprBucket" spellcheck="false" value="videos"></label>
+        <label class="f">E-mail do VPR<input type="email" id="vprMail" autocomplete="username"></label>
+        <label class="f">Senha do VPR<input type="password" id="vprPass" autocomplete="current-password"></label>
+        <div class="file"><button class="btn gold" id="vprLogin" type="button">Conectar</button><button class="btn" id="vprLogout" type="button">Desconectar</button></div>
+      </details>
+      <div class="status" id="vprStatus"></div>
+    </section>
+
+    <section class="sec">
+      <h2>Rastreio</h2>
+      <label class="f">Verificar a fila do VPR
+        <select id="autoModo">
+          <option value="hora">A cada 1 hora (recomendado)</option>
+          <option value="continuo">A cada 30 segundos</option>
+          <option value="manual">Só quando eu mandar</option>
+        </select>
+      </label>
+      <button class="btn gold big" id="scanBtn" type="button">Rastrear e editar agora</button>
+      <span class="status" id="autoState"></span>
+      <p class="hint">Com o Estúdio aberto, o rastreio volta sozinho quando você abre a página. Deixe o Mac ligado; a tela fica acesa enquanto ele trabalha.</p>
+    </section>
+
+    <section class="sec full">
+      <h2>Agora</h2>
+      <div class="nowRow">
+        <canvas class="autoPrev" id="autoPrev" width="270" height="480" aria-label="Prévia do card em edição"></canvas>
+        <div>
+          <div class="autoGrid">
+            <div><small>Vídeo atual</small><b id="autoCur">—</b></div>
+            <div><small>Etapa</small><b id="autoStep">Parado</b></div>
+            <div><small>Na fila</small><b id="autoFila">—</b></div>
+          </div>
+          <div class="prog" aria-hidden="true"><i id="autoBar"></i></div>
+          <p class="hint" id="autoWarn"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>O que entra no card</h2>
+      <label class="check"><input type="checkbox" data-opt="selo"> Selo "Siga o @…" sobre o vídeo</label>
+      <label class="check"><input type="checkbox" data-opt="rodape"> Rodapé de repost (🔁) embaixo do vídeo</label>
+      <p class="hint">Vale para o automático e para o editor. Com o selo desligado, marca d'água de outro perfil continua coberta por uma faixa preta. Nome, @ e biblioteca de rodapés: menu ⋮ → Card, selo e rodapés.</p>
+    </section>
+
+    <section class="sec">
+      <h2>Últimos prontos e erros</h2>
+      <p class="hint">Toque num pronto para trocar a frase e refazer o vídeo com o mesmo número.</p>
+      <div class="autoList" id="autoList"></div>
+      <button class="btn" id="retryErr" type="button">Devolver erros de edição para a fila</button>
+      <div class="autoRev" id="autoRev" hidden></div>
+    </section>
+  </main>
+</div>
 
 <div class="drawer" id="drawer" hidden>
   <aside class="pane" role="dialog" aria-modal="true" aria-labelledby="drTitle">
@@ -359,9 +424,10 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
     </div>
     <nav class="navList" id="drMenu">
       <button class="navItem" type="button" data-view="leg">Legendas geradas<small>As últimas 50, para copiar de novo</small></button>
+      <button class="navItem" type="button" id="navVpr">Automático (VPR Insta Full)<small>Conexão, rastreio da fila e últimos prontos</small></button>
       <button class="navItem" type="button" data-view="card">Card, selo e rodapés<small>Nome e @ do cabeçalho, @ do selo e frases de repost</small></button>
       <button class="navItem" type="button" data-view="perfis">Perfis<small>Foto, nome, arroba e o jeito de escrever de cada perfil</small></button>
-      <button class="navItem" type="button" data-view="vpr" id="navVpr">Conexão VPR<small>Fila do VPR Insta Full e modo automático</small></button>
+
       <button class="navItem" type="button" data-view="cfg" id="navCfg">Configurações do web app<small>Chave da IA, modelos e instalação</small></button>
       <button class="navItem" type="button" data-view="conta" id="navConta">Conta<small id="contaMail">Acesso deste aparelho</small></button>
     </nav>
@@ -374,7 +440,9 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       <p class="hint">O nome e o @ vão no cabeçalho de todo card. O selo "Siga o @…" fica sobre o vídeo. Com a Conexão VPR ativa, tudo é salvo no Supabase (na sua conta); sem ela, só neste aparelho.</p>
       <label class="f">Nome no cabeçalho<input type="text" id="cfgNome" maxlength="40"></label>
       <label class="f">@ no cabeçalho<input type="text" id="cfgHandle" maxlength="40" placeholder="@ojhonatta1"></label>
-      <label class="f">@ do selo "Siga o @…" (vazio = o mesmo do cabeçalho)<input type="text" id="cfgSelo" maxlength="40"></label>
+      <label class="check"><input type="checkbox" data-opt="selo"> Mostrar o selo "Siga o @…" sobre o vídeo</label>
+      <label class="f">@ do selo (vazio = o mesmo do cabeçalho)<input type="text" id="cfgSelo" maxlength="40"></label>
+      <label class="check"><input type="checkbox" data-opt="rodape"> Mostrar o rodapé de repost (🔁) embaixo do vídeo</label>
       <label class="f">Biblioteca de rodapés: uma linha com o nome da categoria e, embaixo, as frases (começam com 🔁, até 45 caracteres)
         <textarea id="cfgRod" style="min-height:300px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
       <div class="file"><button class="btn gold" id="cfgCardSave" type="button">Salvar</button><button class="btn" id="cfgRodReset" type="button">Voltar à biblioteca padrão</button></div>
@@ -394,17 +462,6 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <div class="file"><button class="btn gold" type="submit">Salvar perfil</button><button class="btn" type="button" id="pfCancel">Cancelar</button></div>
       </form>
       <div class="status" id="profStatus"></div>
-    </section>
-    <section class="drView" data-v="vpr" hidden>
-      <p class="hint">Liga o Estúdio à fila do VPR Insta Full Postagens (mesmo Supabase). No modo automático o Estúdio pega os vídeos <b>na fila</b>, edita e devolve em <b>prontos/</b>. Tudo fica salvo só neste aparelho.</p>
-      <p class="hint">A URL e a chave anon estão no VPR: no Mac, abra <b>http://localhost:5056/config.js</b>, copie <b>tudo</b> (Cmd+A, Cmd+C) e cole no campo da chave. O Estúdio separa a URL e a chave sozinho.</p>
-      <label class="f">URL do Supabase<input type="url" id="vprUrl" spellcheck="false" placeholder="https://xxxx.supabase.co"></label>
-      <label class="f">Chave anon (pública) ou o config.js inteiro<input type="password" id="vprAnon" autocomplete="off" spellcheck="false"></label>
-      <label class="f">Bucket<input type="text" id="vprBucket" spellcheck="false" value="videos"></label>
-      <label class="f">E-mail do VPR<input type="email" id="vprMail" autocomplete="username"></label>
-      <label class="f">Senha do VPR<input type="password" id="vprPass" autocomplete="current-password"></label>
-      <div class="file"><button class="btn gold" id="vprLogin" type="button">Conectar</button><button class="btn" id="vprLogout" type="button">Desconectar</button></div>
-      <div class="status" id="vprStatus"></div>
     </section>
     <section class="drView" data-v="cfg" id="cfgSec" hidden>
         <p class="hint">Tudo aqui fica salvo neste aparelho, mesmo fechando o app. Salva sozinho quando você muda um campo.</p>
@@ -534,7 +591,8 @@ function boxH(){
 function draw(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   // tudo cabe na área 4:5 do Feed (y 285 a 1635), com folga
-  const AVAIL=FEED_BOT-FEED_TOP-80,headH=120,gap1=48,gap2=48,MINBOX=420,FOOT=state.rodape?84:0;
+  const showRod=!!state.rodape&&cardOpt('rodape');
+  const AVAIL=FEED_BOT-FEED_TOP-80,headH=120,gap1=48,gap2=48,MINBOX=420,FOOT=showRod?84:0;
   let size=state.size,lh,lines,textH;
   for(;;){
     lh=Math.round(size*1.2);ctx.font=`800 ${size}px Montserrat, system-ui, sans-serif`;
@@ -577,7 +635,7 @@ function draw(){
     ctx.fillText(state.analyzing?'analisando o vídeo…':'a cena aparece aqui',W/2,by+bh/2+14);
   }
   drawSelo();
-  if(state.rodape){ // rodapé de repost: centro do espaço preto abaixo do vídeo
+  if(showRod){ // rodapé de repost: centro do espaço preto abaixo do vídeo
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#b9b9bf';ctx.font='600 34px Montserrat, system-ui, sans-serif';
     ctx.fillText(state.rodape,W/2,Math.round((by+bh+Math.max(by+bh+FOOT,FEED_BOT))/2),W-PAD*2);ctx.restore();
   }
@@ -600,6 +658,7 @@ function seloBox(){
     x0=Math.max(0,x0);x1=Math.min(W,x1);y0=Math.max(L.by,y0);y1=Math.min(L.by+L.bh,y1);
     if(x1-x0>4&&y1-y0>4){const pd=12;r={x:x0-pd,y:y0-pd,w:x1-x0+2*pd,h:y1-y0+2*pd};}
   }
+  const wmRect=r?{...r}:null;
   const h0=Math.round(Math.max(64,L.bh*.075));
   if(!r)r={x:W/2,y:L.by+L.bh*5/6-h0/2,w:0,h:h0}; // padrão: centro do terço inferior
   if(r.h<56){const cy=r.y+r.h/2;r.h=56;r.y=cy-28;}
@@ -608,10 +667,12 @@ function seloBox(){
   if(need>W){fs=Math.floor(fs*(W-8)/need);ctx.font=`800 ${fs}px Montserrat, system-ui, sans-serif`;need=W;}
   if(r.w<need){const cx=r.x+r.w/2;r.x=cx-need/2;r.w=need;} // a faixa cresce para caber o texto e continua cobrindo a marca
   r.x=Math.max(0,Math.min(W-r.w,r.x));r.y=Math.max(L.by,Math.min(L.by+L.bh-r.h,r.y));
-  return {r,fs,txt};
+  return {r,fs,txt,wmRect};
 }
 function drawSelo(){
+  const on=cardOpt('selo');if(!on&&!state.wm)return;
   const b=seloBox();if(!b)return;
+  if(!on){if(b.wmRect){ctx.save();ctx.fillStyle='#000';ctx.fillRect(b.wmRect.x,b.wmRect.y,b.wmRect.w,b.wmRect.h);ctx.restore();}return;} // selo desligado: só esconde a marca de terceiro
   ctx.save();ctx.fillStyle='#000';ctx.fillRect(b.r.x,b.r.y,b.r.w,b.r.h);
   ctx.fillStyle='#fff';ctx.font=`800 ${b.fs}px Montserrat, system-ui, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(b.txt,b.r.x+b.r.w/2,b.r.y+b.r.h/2+2);ctx.restore();
@@ -1845,8 +1906,9 @@ async function autoLoop(){
     if(!v){
       setCur(null);
       if(auto.mode==='agora'){
-        if(!lsGet(HOURLY_KEY)){autoStop();setStep('Fila vazia: tudo editado',100);autoWarn('Rastreio concluído. Nada mais na fila para editar.');return;}
-        auto.mode='hora';autoUI();
+        const m=autoModo();
+        if(m==='manual'){autoStop();setStep('Fila vazia: tudo editado',100);autoWarn('Rastreio concluído. Nada mais na fila para editar.');return;}
+        auto.mode=m;autoUI();
       }
       const ms=auto.mode==='hora'?3600e3:30e3,prox=new Date(Date.now()+ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
       setStep('Fila vazia · próximo rastreio às '+prox,0);await autoSleep(ms);continue;
@@ -1877,21 +1939,21 @@ async function autoLoop(){
   }
   setCur(null);setStep('Parado',0);
 }
+const HOURLY_KEY='estudioCards.vpr.hora',MODO_KEY='estudioCards.vpr.modo';
+function autoModo(){const m=lsGet(MODO_KEY);if(m==='hora'||m==='continuo'||m==='manual')return m;return lsGet(HOURLY_KEY)===false?'manual':'hora';}
 function autoUI(){
-  const b=$('autoBtn');b.setAttribute('aria-pressed',auto.on);
-  b.setAttribute('aria-pressed',auto.on&&auto.mode==='continuo');
-  b.textContent=auto.on&&auto.mode==='continuo'?'Contínuo LIGADO (30 s) · tocar para desligar':'Ligar modo contínuo';
   $('scanBtn').textContent=auto.on?'Parar':'Rastrear e editar agora';
-  $('hourly').checked=!!lsGet(HOURLY_KEY);
+  $('autoModo').value=autoModo();
+  $('autoDot').classList.toggle('on',auto.on);
   document.body.classList.toggle('autoRun',auto.on||auto.busy);
-  const modo={continuo:'Modo contínuo: olha a fila a cada 30 s.',hora:'Rastreio de 1 em 1 hora ligado.',agora:'Editando tudo que está na fila.'}[auto.mode]||'';
-  $('autoState').textContent=auto.on?modo+' Tela acesa: '+(IS_IOS?'deixe o app aberto e na frente.':'deixe esta aba visível.'):(lsGet(HOURLY_KEY)?'Rastreio de 1 em 1 hora ligado (parado agora).':'');
+  const modo={continuo:'Ligado: olha a fila a cada 30 s.',hora:'Ligado: olha a fila de 1 em 1 hora.',agora:'Editando tudo que está na fila.'}[auto.mode]||'';
+  $('autoState').className=auto.on?'status ok':'status';
+  $('autoState').textContent=auto.on?modo:(autoModo()==='manual'?'Parado. Toque em Rastrear e editar agora quando quiser.':'Parado. Volta sozinho na próxima vez que você abrir o Estúdio, ou toque em Rastrear.');
 }
-const HOURLY_KEY='estudioCards.vpr.hora';
 async function autoStart(mode){
   auto.mode=mode||'continuo';
   if(auto.on){autoUI();if(autoWake)autoWake();return;} // já rodando: só troca o modo e acorda
-  if(!await vprUser()){openDrawer('vpr');$('vprStatus').className='status warn';$('vprStatus').textContent='Conecte no VPR para ligar o modo automático.';return;}
+  if(!await vprUser()){location.hash='#auto';$('connForm').open=true;$('vprStatus').className='status warn';$('vprStatus').textContent='Conecte no VPR para ligar o rastreio.';return;}
   if(!sample)sample=await getAI();
   if(!sample){autoWarn('A IA está desligada: entre pelo servidor ou coloque uma chave em Configurações.');return;}
   // libera áudio e vídeo dentro do toque (o navegador exige um gesto para tocar com som)
@@ -1903,22 +1965,23 @@ function autoStop(msg){
   auto.on=false;keepAwake(false);if(autoWake)autoWake();autoUI();
   if(msg)autoWarn(msg);else if(auto.busy)autoWarn('Desligando: termino o vídeo atual e paro.');
 }
-$('autoBtn').onclick=()=>auto.on&&auto.mode==='continuo'?autoStop():autoStart('continuo');
 $('scanBtn').onclick=()=>auto.on?autoStop():autoStart('agora');
-$('hourly').onchange=e=>{
-  lsSet(HOURLY_KEY,e.target.checked);
-  if(e.target.checked){if(!auto.on)autoStart('agora');else autoUI();} // rastreia já e depois de hora em hora
-  else if(auto.on&&auto.mode==='hora')autoStop();
-  else autoUI();
+$('autoModo').onchange=e=>{
+  const m=e.target.value;lsSet(MODO_KEY,m);
+  if(m==='manual'){if(auto.on&&auto.mode!=='agora')autoStop();else autoUI();}
+  else if(auto.on){if(auto.mode!=='agora'){auto.mode=m;if(autoWake)autoWake();}autoUI();}
+  else autoStart('agora'); // rastreia já e depois no intervalo escolhido
 };
-// rastreio de 1 em 1 hora continua depois de reabrir o Estúdio: começa no primeiro toque
-// (o navegador só deixa tocar o vídeo com som depois de um gesto)
-function resumeHourly(){
-  if(IN_VIEWER||!lsGet(HOURLY_KEY)||auto.on)return;
-  const go=()=>{if(!auto.on&&lsGet(HOURLY_KEY))autoStart('agora');};
-  if(navigator.userActivation&&navigator.userActivation.hasBeenActive)go();
-  else{autoWarn('Rastreio de 1 em 1 hora: toque em qualquer lugar da tela para retomar.');document.addEventListener('pointerdown',go,{once:true});}
+// ao abrir o Estúdio, o rastreio volta sozinho. O render quadro a quadro não precisa de toque;
+// só a gravação antiga (navegador sem WebCodecs) precisa de um gesto para tocar o vídeo com som.
+function resumeAuto(){
+  if(IN_VIEWER||auto.on||autoModo()==='manual')return;
+  const go=()=>{if(!auto.on&&autoModo()!=='manual')autoStart('agora');};
+  if(hasWebCodecs()||(navigator.userActivation&&navigator.userActivation.hasBeenActive))go();
+  else{autoWarn('Toque em qualquer lugar da tela para o rastreio retomar (este navegador grava em tempo real).');document.addEventListener('pointerdown',go,{once:true});}
 }
+// prévia pequena do card que está sendo feito
+setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').getContext('2d').drawImage(cv,0,0,270,480);}catch(e){}},1000);
 
 /* revisão: trocar pela frase alternativa, re-renderizar e sobrescrever o mesmo número */
 async function openReview(id){
@@ -1992,11 +2055,18 @@ $('retryErr').onclick=async()=>{
 /* Conexão VPR (menu ⋮) */
 function vprFormFill(){const c=vprCfg();$('vprUrl').value=c.url||'';$('vprAnon').value=c.anon||'';$('vprBucket').value=c.bucket||'videos';$('vprMail').value=c.email||'';}
 async function vprRefresh(){
-  const c=vprCfg();$('autoSec').hidden=IN_VIEWER||!(c.url&&c.anon);
-  if($('autoSec').hidden)return;
-  const u=await vprUser();const st=$('vprStatus');
-  if(u){st.className='status ok';st.textContent='Conectado como '+u.email+'.';cloudLoad();try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}autoUI();resumeHourly();}
-  else{st.className='status warn';st.textContent='Não conectado: preencha e toque em Conectar.';$('autoFila').textContent='—';}
+  if(IN_VIEWER)return;
+  const c=vprCfg(),u=c.url&&c.anon?await vprUser():null,st=$('vprStatus');
+  $('connPill').className='pill'+(u?' on':'');$('connPill').textContent=u?'Conectado':'Desconectado';$('connWho').textContent=u?u.email:'';
+  if(u){
+    $('connForm').open=false;st.className='status';st.textContent='';
+    cloudLoad();try{const sb=await vprClient();await refreshFila(sb);await renderAutoList(sb);}catch(e){}
+    autoUI();resumeAuto();
+  }else{
+    $('connForm').open=true;st.className='status warn';
+    st.textContent=c.url?'A sessão do VPR expirou ou foi encerrada. Digite a senha e toque em Conectar.':'Configure a conexão para o Estúdio pegar os vídeos do VPR.';
+    $('autoFila').textContent='—';autoUI();
+  }
 }
 $('vprLogin').onclick=async()=>{
   const st=$('vprStatus');
@@ -2019,16 +2089,25 @@ $('vprLogin').onclick=async()=>{
     $('vprPass').value='';
     if(!await vprUser())throw new Error('Digite o e-mail e a senha do VPR.');
     await vprRefresh();
-  }catch(e){st.className='status warn';st.textContent='Não conectou: '+autoErro(e);$('autoSec').hidden=!(c.url&&c.anon);}
+  }catch(e){st.className='status warn';st.textContent='Não conectou: '+autoErro(e);}
 };
 $('vprLogout').onclick=async()=>{
   if(auto.on)autoStop();
   try{const sb=await vprClient();await sb.auth.signOut();}catch(e){}
-  $('vprStatus').className='status';$('vprStatus').textContent='Desconectado do VPR.';$('autoFila').textContent='—';
+  $('vprStatus').className='status';$('vprStatus').textContent='Desconectado do VPR.';$('autoFila').textContent='—';vprRefresh();
 };
 
 /* ---------- menu lateral (⋮) ---------- */
-const VIEWS={leg:'Legendas geradas',card:'Card, selo e rodapés',perfis:'Perfis',vpr:'Conexão VPR',cfg:'Configurações',conta:'Conta'};
+const VIEWS={leg:'Legendas geradas',card:'Card, selo e rodapés',perfis:'Perfis',cfg:'Configurações',conta:'Conta'};
+const SUBS={editor:'Sobe o vídeo de referência. O estúdio acha a cena, lê a frase e monta o card em 1080×1920.',auto:'Pega os vídeos na fila do VPR Insta Full, edita sozinho e devolve prontos para postar.'};
+function showPage(pg){
+  pg=pg==='auto'&&!IN_VIEWER?'auto':'editor';
+  $('pageEditor').hidden=pg!=='editor';$('pageAuto').hidden=pg!=='auto';
+  document.querySelectorAll('[data-page]').forEach(a=>{if(a.dataset.page===pg)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+  $('pageSub').textContent=SUBS[pg];
+  if(pg==='auto'){vprFormFill();vprRefresh();}
+}
+window.addEventListener('hashchange',()=>showPage(location.hash.slice(1)));
 let drawerFrom=null;
 function showView(v){
   $('drMenu').hidden=!!v;$('drBack').hidden=!v;$('drTitle').textContent=v?VIEWS[v]:'Menu';
@@ -2037,7 +2116,7 @@ function showView(v){
   if(v==='perfis'){renderProfList();$('profForm').hidden=true;$('newProf').hidden=false;$('profStatus').textContent='';}
   if(v==='cfg')refreshCfgUI();
   if(v==='card'){fillCardCfg();$('cfgCardStatus').textContent='';cloudLoad().then(r=>{fillCardCfg();$('cfgCardStatus').className=r==='cloud'?'status ok':'status';$('cfgCardStatus').textContent=r==='cloud'?'Carregado do Supabase.':'';});}
-  if(v==='vpr'){vprFormFill();vprRefresh();}
+
   if(v==='conta'){const x=lsGet(SES_KEY)||{};$('contaMail2').textContent=x.email||'';
     $('contaMode').textContent=x.mode==='server'?'Login pelo servidor: a senha e a chave da IA ficam na Vercel.':'Login só neste aparelho (o servidor não respondeu quando você entrou).';}
 }
@@ -2050,7 +2129,8 @@ $('drBack').onclick=()=>showView(null);
 $('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))closeDrawer();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('drawer').hidden)closeDrawer();});
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;$('navVpr').hidden=true;}
+if(IN_VIEWER){$('navCfg').hidden=true;$('navConta').hidden=true;$('navVpr').hidden=true;$('tabs').hidden=true;}
+$('navVpr').onclick=()=>{closeDrawer();location.hash='#auto';};
 $('manageProf').onclick=()=>openDrawer('perfis');
 
 /* ---------- card: nome e @ do cabeçalho, @ do selo e biblioteca de rodapés ---------- */
@@ -2062,6 +2142,11 @@ const DEFAULT_RODAPES={
   'Superação / resiliência':['🔁 Reposta pra quem nunca desistiu','🔁 Manda pra quem levanta sempre'],
   'Humor / identificação':['🔁 Marca quem faz isso','🔁 Reposta se você já passou por isso']
 };
+const CARDOPT_KEY='estudioCards.cardOpts';
+function cardOpt(k){const o=lsGet(CARDOPT_KEY)||{};return o[k]!==false;}
+function setCardOpt(k,v){const o=lsGet(CARDOPT_KEY)||{};o[k]=!!v;lsSet(CARDOPT_KEY,o);syncOptBoxes();}
+function syncOptBoxes(){document.querySelectorAll('[data-opt]').forEach(b=>{b.checked=cardOpt(b.dataset.opt);});}
+document.querySelectorAll('[data-opt]').forEach(b=>b.addEventListener('change',()=>{setCardOpt(b.dataset.opt,b.checked);cloudSave();}));
 function rodapeLib(){const l=lsGet(ROD_KEY);return l&&typeof l==='object'&&Object.values(l).some(v=>Array.isArray(v)&&v.length)?l:DEFAULT_RODAPES;}
 function rodapeHist(){return (lsGet(ROD_HIST)||[]).slice(0,5);}
 function libToText(l){return Object.entries(l).map(([k,v])=>k+'\n'+v.join('\n')).join('\n\n');}
@@ -2085,6 +2170,7 @@ async function cloudLoad(){ // 'cloud' | 'nosql' (tabelas ainda não criadas) | 
     if(data){
       const m=mainProf();if(m){if(data.nome)m.name=data.nome;if(data.handle)m.handle=data.handle;lsSet(PROF_KEY,profiles);}
       lsSet(SELO_KEY,data.selo_handle||'');
+      if(typeof data.mostrar_selo==='boolean'||typeof data.mostrar_rodape==='boolean'){const o=lsGet(CARDOPT_KEY)||{};if(typeof data.mostrar_selo==='boolean')o.selo=data.mostrar_selo;if(typeof data.mostrar_rodape==='boolean')o.rodape=data.mostrar_rodape;lsSet(CARDOPT_KEY,o);syncOptBoxes();}
       if(data.rodapes&&Object.values(data.rodapes).some(v=>Array.isArray(v)&&v.length))lsSet(ROD_KEY,data.rodapes);
     }
     const {data:h}=await c.sb.from('estudio_rodapes_hist').select('rodape').order('created_at',{ascending:false}).limit(20);
@@ -2095,7 +2181,9 @@ async function cloudLoad(){ // 'cloud' | 'nosql' (tabelas ainda não criadas) | 
 async function cloudSave(){
   const c=await cloudCtx();if(!c)return 'local';const m=mainProf();
   try{
-    const {error}=await c.sb.from('estudio_config').upsert({user_id:c.u.id,nome:m.name,handle:m.handle,selo_handle:lsGet(SELO_KEY)||null,rodapes:rodapeLib(),updated_at:new Date().toISOString()});
+    const row={user_id:c.u.id,nome:m.name,handle:m.handle,selo_handle:lsGet(SELO_KEY)||null,rodapes:rodapeLib(),updated_at:new Date().toISOString()};
+    let {error}=await c.sb.from('estudio_config').upsert({...row,mostrar_selo:cardOpt('selo'),mostrar_rodape:cardOpt('rodape')});
+    if(error&&/column|schema/i.test(error.message||''))({error}=await c.sb.from('estudio_config').upsert(row));
     if(error)throw error;return 'cloud';
   }catch(e){return 'nosql';}
 }
@@ -2260,7 +2348,8 @@ $('logoutBtn').onclick=()=>{try{localStorage.removeItem(SES_KEY);}catch(e){}show
 if(IN_VIEWER)unlock();
 else{const ses=lsGet(SES_KEY),ok=ses&&ses.until>Date.now()&&(ses.mode==='server'?!!ses.token:!!lsGet(ACC_KEY));if(ok)unlock();else showGate();}
 
-loadProfiles();loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();if(!IN_VIEWER&&vprCfg().url)vprRefresh();
+loadProfiles();loadDefaults();refreshCfgUI();restoreOutputs();renderLegendas();syncOptBoxes();
+showPage(location.hash.slice(1));if(!IN_VIEWER&&vprCfg().url)vprRefresh();
 const go=()=>{draw();requestAnimationFrame(loop);};
 avatar.onload=draw;
 if(document.fonts&&document.fonts.load){Promise.all([document.fonts.load('800 60px Montserrat'),document.fonts.load('700 44px Montserrat'),document.fonts.load('500 36px Montserrat')]).finally(go);}else go();
