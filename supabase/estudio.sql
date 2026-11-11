@@ -1,5 +1,6 @@
 -- Estúdio de Cards — tabelas no mesmo Supabase do VPR Insta Full Postagens.
--- Cole tudo no Supabase: SQL Editor → New query → Run. Pode rodar mais de uma vez.
+-- Rode no projeto do VPR (URL https://nfzlmtujgpttquurbawp.supabase.co): SQL Editor → New query → Run.
+-- Pode rodar mais de uma vez.
 
 -- ------------------------------------------------ configurações por usuário
 -- Nome e @ do cabeçalho, @ do selo "Siga o @…" e a biblioteca de rodapés de repost.
@@ -44,5 +45,12 @@ revoke all on public.estudio_config, public.estudio_rodapes_hist from anon;
 
 -- ------------------------------------------- plano de conexão junto do vídeo
 -- O modo automático grava o comentário para fixar e o JSON do motor de conexão.
-alter table public.videos add column if not exists comentario_fixado text;
-alter table public.videos add column if not exists conexao jsonb;
+-- (só no projeto do VPR, que tem a tabela videos; em outro projeto esta parte é pulada)
+do $$ begin
+  if to_regclass('public.videos') is not null then
+    alter table public.videos add column if not exists comentario_fixado text;
+    alter table public.videos add column if not exists conexao jsonb;
+  else
+    raise notice 'Tabela public.videos não encontrada: confira se este é o projeto do VPR (nfzlmtujgpttquurbawp).';
+  end if;
+end $$;
