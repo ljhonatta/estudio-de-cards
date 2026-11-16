@@ -26,6 +26,7 @@ Web app pessoal do Jhonatta (@ojhonatta1) para produzir Reels no formato card. T
 - **Configurações do card** (⋮ → Card, selo e rodapés): `estudio_config` (nome, handle, selo_handle, rodapes) e `estudio_rodapes_hist` no Supabase do VPR, por usuário com RLS (`supabase/estudio.sql`); sem conexão/tabelas cai em `localStorage` (`estudioCards.rodapes`, `.rodapes.hist`, `.selo`). O modo automático grava `videos.comentario_fixado` e `videos.conexao` (se as colunas existirem).
 - Persistência: IndexedDB `estudio-cards` com stores `videos` (máx. 3) e `legendas` (máx. 50). Padrão visual em `localStorage['estudioCards.v1']`.
 - Layout do card: canvas 1080×1920; todo o conteúdo fica entre `FEED_TOP=285` e `FEED_BOT=1635` (área 4:5 do Feed).
+- Cena no card: preenche a caixa cortando só se a perda for até 20%; acima disso (ex.: vídeo vertical com texto escrito) **encaixa a cena inteira** com preto nas laterais (`state.layout` tem `dx,dy,dw,dh`). Zoom > 100% força o corte. A largura da cena considera movimento e brilho (borda escura com conteúdo não é cortada).
 
 ## Voz das frases e legendas
 
