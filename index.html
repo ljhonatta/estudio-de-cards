@@ -263,12 +263,11 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <div class="status" id="anStatus"></div>
         <div id="mapBox" hidden>
           <div class="map"><canvas id="map" aria-label="Áreas detectadas no vídeo"></canvas></div>
-          <div class="legend" style="margin-top:8px"><span><i style="background:var(--green)"></i>Cena que vai para o card</span><span><i style="background:var(--gold)"></i>Texto original</span><span><i style="background:#fff"></i>Marca d'água (o selo cobre)</span></div>
+          <div class="legend" style="margin-top:8px"><span><i style="background:var(--green)"></i>Cena que vai para o card</span><span><i style="background:var(--gold)"></i>Texto original</span></div>
           <div class="hint" style="margin:12px 0 6px">Errou a área? Toque em qual corrigir e depois arraste o dedo sobre a imagem. Fora disso a imagem fica travada e a tela rola normal.</div>
           <div class="seg" role="group" aria-label="Área para ajustar">
             <button type="button" class="v" data-mode="video" aria-pressed="false">Ajustar cena</button>
             <button type="button" data-mode="text" aria-pressed="false">Ajustar texto</button>
-            <button type="button" data-mode="wm" aria-pressed="false">Ajustar selo</button>
           </div>
           <button class="btn" id="reAnalyze" type="button" style="margin-top:10px">Detectar de novo</button>
         </div>
@@ -330,7 +329,6 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <p class="hint" id="planWhy"></p>
         <div class="sugList" id="altList"></div>
         <p class="status warn" id="planAlert" hidden></p>
-        <div class="kv"><span>Marca d'água</span><b id="wmMsg">—</b></div>
         <div class="autoTop"><label class="check"><input type="checkbox" data-opt="selo"> Selo "Siga o @"</label><label class="check"><input type="checkbox" data-opt="rodape"> Rodapé de repost</label></div>
         <label class="f">Rodapé de repost
           <div class="inl"><select id="rodSel"></select><button class="btn" id="rodSwap" type="button">Trocar</button></div>
@@ -424,7 +422,7 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       <h2>O que entra no card</h2>
       <label class="check"><input type="checkbox" data-opt="selo"> Selo "Siga o @…" sobre o vídeo</label>
       <label class="check"><input type="checkbox" data-opt="rodape"> Rodapé de repost (🔁) embaixo do vídeo</label>
-      <p class="hint">Vale para o automático e para o editor. Com o selo desligado, marca d'água de outro perfil continua coberta por uma faixa preta. Nome, @ e biblioteca de rodapés: menu ⋮ → Card, selo e rodapés.</p>
+      <p class="hint">Vale para o automático e para o editor. Nome, @ e biblioteca de rodapés: menu ⋮ → Card, selo e rodapés.</p>
     </section>
 
     <section class="sec">
@@ -669,32 +667,22 @@ function draw(){
   }
 }
 // selo "Siga o @…": faixa preta, texto branco em negrito, sobre o vídeo do começo ao fim.
-// Com marca d'água de terceiro (state.wm, em pixels do vídeo original), a faixa cobre a área inteira.
 function seloBox(){
   const L=state.layout;if(!L)return null;
   const txt='Siga o '+seloHandle();
-  let r=null;
-  if(state.wm){
-    const kx=W/L.sw,ky=L.bh/L.sh;
-    let x0=(state.wm.x-L.sx)*kx,y0=L.by+(state.wm.y-L.sy)*ky,x1=x0+state.wm.w*kx,y1=y0+state.wm.h*ky;
-    x0=Math.max(0,x0);x1=Math.min(W,x1);y0=Math.max(L.by,y0);y1=Math.min(L.by+L.bh,y1);
-    if(x1-x0>4&&y1-y0>4){const pd=12;r={x:x0-pd,y:y0-pd,w:x1-x0+2*pd,h:y1-y0+2*pd};}
-  }
-  const wmRect=r?{...r}:null;
   const h0=Math.round(Math.max(64,L.bh*.075));
-  if(!r)r={x:W/2,y:L.by+L.bh*5/6-h0/2,w:0,h:h0}; // padrão: centro do terço inferior
+  const r={x:W/2,y:L.by+L.bh*5/6-h0/2,w:0,h:h0}; // centro do terço inferior do vídeo
   if(r.h<56){const cy=r.y+r.h/2;r.h=56;r.y=cy-28;}
   let fs=Math.round(Math.min(r.h*.5,48));ctx.font=`800 ${fs}px Montserrat, system-ui, sans-serif`;
   let need=ctx.measureText(txt).width+fs*1.4;
   if(need>W){fs=Math.floor(fs*(W-8)/need);ctx.font=`800 ${fs}px Montserrat, system-ui, sans-serif`;need=W;}
   if(r.w<need){const cx=r.x+r.w/2;r.x=cx-need/2;r.w=need;} // a faixa cresce para caber o texto e continua cobrindo a marca
   r.x=Math.max(0,Math.min(W-r.w,r.x));r.y=Math.max(L.by,Math.min(L.by+L.bh-r.h,r.y));
-  return {r,fs,txt,wmRect};
+  return {r,fs,txt};
 }
 function drawSelo(){
-  const on=cardOpt('selo');if(!on&&!state.wm)return;
+  if(!cardOpt('selo'))return; // desligado: o vídeo fica limpo, sem faixa nenhuma
   const b=seloBox();if(!b)return;
-  if(!on){if(b.wmRect){ctx.save();ctx.fillStyle='#000';ctx.fillRect(b.wmRect.x,b.wmRect.y,b.wmRect.w,b.wmRect.h);ctx.restore();}return;} // selo desligado: só esconde a marca de terceiro
   ctx.save();ctx.fillStyle='#000';ctx.fillRect(b.r.x,b.r.y,b.r.w,b.r.h);
   ctx.fillStyle='#fff';ctx.font=`800 ${b.fs}px Montserrat, system-ui, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(b.txt,b.r.x+b.r.w/2,b.r.y+b.r.h/2+2);ctx.restore();
@@ -779,7 +767,7 @@ function drawMap(){
   map.width=f.width;map.height=f.height;mctx.drawImage(f,0,0);
   const s=f.width/vid.videoWidth,lw=Math.max(3,f.width/160);
   const rect=(r,c,on)=>{if(!r)return;mctx.save();mctx.strokeStyle=c;mctx.lineWidth=on?lw*1.6:lw;mctx.setLineDash(on?[]:[lw*3,lw*2]);mctx.strokeRect(r.x*s,r.y*s,r.w*s,r.h*s);mctx.restore();};
-  rect(state.text,'#c9a96e',state.mode==='text');rect(state.scene,'#6fd08c',state.mode==='video');rect(state.wm,'#ffffff',state.mode==='wm');
+  rect(state.text,'#c9a96e',state.mode==='text');rect(state.scene,'#6fd08c',state.mode==='video');
   if(drag){mctx.save();mctx.fillStyle=state.mode==='video'?'rgba(111,208,140,.25)':'rgba(201,169,110,.25)';mctx.fillRect(Math.min(drag.x0,drag.x1),Math.min(drag.y0,drag.y1),Math.abs(drag.x1-drag.x0),Math.abs(drag.y1-drag.y0));mctx.restore();}
 }
 function mapPt(e){const b=map.getBoundingClientRect();return {x:(e.clientX-b.left)*map.width/b.width,y:(e.clientY-b.top)*map.height/b.height};}
@@ -791,7 +779,6 @@ map.addEventListener('pointerup',()=>{
   drag=null;
   if(r.w>12&&r.h>12){
     if(state.mode==='video')state.scene=clampRect(r);
-    else if(state.mode==='wm'){state.wm={...clampRect(r),src:'manual'};updateWmMsg();}
     else{state.text=clampRect(r);planAfterRead();}
     setSeg('mode',state.mode);
   }
@@ -1016,24 +1003,6 @@ $('readBtn').onclick=planAfterRead;
 const CRIT_MAX={identificacao:3,envio:2,clareza:2,emocao:2,coerencia:1};
 const CRIT_NOME={identificacao:'Identificação',envio:'Envio',clareza:'Clareza',emocao:'Emoção',coerencia:'Coerência'};
 let planCtl=null,planSeq=0;
-// procura "Siga o @…", "@perfil" escrito sobre a cena (OCR no aparelho): devolve a área em pixels do vídeo original
-async function detectWatermarkOCR(){
-  try{
-    const f=state.mapFrame,sc=state.scene;if(!f||!sc||!vid.videoWidth)return null;
-    const s=f.width/vid.videoWidth,c=document.createElement('canvas');
-    c.width=Math.max(1,Math.round(sc.w*s));c.height=Math.max(1,Math.round(sc.h*s));
-    c.getContext('2d').drawImage(f,sc.x*s,sc.y*s,sc.w*s,sc.h*s,0,0,c.width,c.height);
-    if(!ocrWorker)ocrWorker=(async()=>{if(!window.Tesseract)await loadScript(OCR_JS);return Tesseract.createWorker('por');})();
-    let w;try{w=await ocrWorker;}catch(e){ocrWorker=null;return null;}
-    const {data}=await w.recognize(c);
-    const re=/@[\w.]{3,}|\bsiga\b|\bfollow\b/i;
-    const hits=(data.lines||[]).filter(l=>l.confidence>=40&&re.test(l.text||''));
-    if(!hits.length)return null;
-    let x0=1e9,y0=1e9,x1=0,y1=0;
-    for(const l of hits){const b=l.bbox;x0=Math.min(x0,b.x0);y0=Math.min(y0,b.y0);x1=Math.max(x1,b.x1);y1=Math.max(y1,b.y1);}
-    return {x:sc.x+x0/s,y:sc.y+y0/s,w:(x1-x0)/s,h:(y1-y0)/s,src:'ocr'};
-  }catch(e){return null;}
-}
 function pickRodape(lib,hist,nicho){
   const n=String(nicho||'').toLowerCase(),cats=Object.keys(lib);
   const cat=cats.find(k=>k.toLowerCase().split(/[\s/]+/).some(w=>w.length>3&&n.includes(w)));
@@ -1050,34 +1019,26 @@ function normalizePlan(o,orig,lib,hist){
     .filter(a=>a.frase&&a.frase.length<=90&&a.frase!==orig).slice(0,3);
   let rod=str(o.rodape);
   if(!rod.startsWith('🔁')||rod.length>45||hist.includes(rod)||/\bsig[ao]\b|seguir|follow/i.test(rod))rod=pickRodape(lib,hist,o.nicho);
-  const wa=o.marca_dagua_terceiro||{},a=wa.area||{};
-  let aiArea=null;
-  if(wa.detectada&&vid.videoWidth){
-    const f=v=>Math.max(0,Math.min(1000,Number(v)||0))/1000;
-    let x=f(a.x)*vid.videoWidth,y=f(a.y)*vid.videoHeight,w=f(a.w)*vid.videoWidth,h=f(a.h)*vid.videoHeight;
-    if(w>4&&h>4){const px=w*.2,py=h*.35;aiArea={x:Math.max(0,x-px),y:Math.max(0,y-py),w:w+2*px,h:h+2*py,src:'ia'};} // a IA estima: sobra de folga
-  }
   const dur=vid.duration||0;let corte=Math.max(0,Math.min(5,Number(o.corte_inicio_seg)||0));if(dur-corte<5)corte=0;corte=Math.round(corte*10)/10;
   return {assunto:str(o.assunto),nicho:str(o.nicho),emocao:str(o.emocao),nota_original:nota,criterios:crit,
     frase_original:orig,frase_escolhida:'',alternativas:alts,rodape:rod,rodape_motivo:str(o.rodape_motivo),
-    marca_dagua_terceiro:{detectada:!!wa.detectada,area:{x:0,y:0,w:0,h:0}},legenda:str(o.legenda),
-    comentario_fixado:str(o.comentario_fixado),corte_inicio_seg:corte,alerta:str(o.alerta),por_que_original:str(o.por_que_original),_aiArea:aiArea};
+    legenda:str(o.legenda),
+    comentario_fixado:str(o.comentario_fixado),corte_inicio_seg:corte,alerta:str(o.alerta),por_que_original:str(o.por_que_original)};
 }
 function chooseFrase(p){
   if(p.frase_original&&p.nota_original>=8)p.frase_escolhida=p.frase_original;
   else{const b=[...p.alternativas].sort((x,y)=>y.nota-x.nota)[0];p.frase_escolhida=b?b.frase:p.frase_original;}
   return p;
 }
-function planPublic(p){const o={...p};delete o._aiArea;delete o.por_que_original;return o;}
+function planPublic(p){const o={...p};delete o.por_que_original;return o;}
 async function connectionPlan(orig){
   const seq=++planSeq;orig=String(orig||'').trim();
-  state.plan=null;if(!(state.wm&&state.wm.src==='manual'))state.wm=null;
+  state.plan=null;state.wm=null;
   const lib=rodapeLib(),hist=rodapeHist();
   state.rodape=state.rodape||pickRodape(lib,hist,'');
   renderPlan('loading');
   if(!sample)sample=await getAI();
-  const ocrP=detectWatermarkOCR();
-  const fim=async(st,e)=>{const ocr=await ocrP;if(seq!==planSeq)return null;if(ocr&&!(state.wm&&state.wm.src==='manual'))state.wm=ocr;renderPlan(st,e);return null;};
+  const fim=async(st,e)=>{if(seq!==planSeq)return null;renderPlan(st,e);return null;};
   if(!sample||!sampleOk)return fim('off');
   planCtl?.abort();planCtl=new AbortController();
   let imgs=[];
@@ -1107,12 +1068,10 @@ async function connectionPlan(orig){
     '• "legenda": gancho na primeira linha, 2 ou 3 parágrafos curtos, CTA final com UMA única ação (comentar, OU marcar, OU seguir), e exatamente 3 hashtags no fim. Não coloque crédito de autor.\n'+
     '• "comentario_fixado": um comentário curto para fixar que puxa conversa.\n'+
     '• "corte_inicio_seg": segundo em que o vídeo deve começar para prender nos 2 primeiros segundos (0 se o começo já é bom; nunca corte uma fala no meio; no máximo 5).\n'+
-    '• "marca_dagua_terceiro": procure, DENTRO da cena do vídeo, textos como "Siga o @…", "@perfil" ou logos de outros perfis. '+
-    'Ignore o cabeçalho de perfil e a frase do topo do repost (eles não vão para o card). Se achar, "detectada": true e "area" com x, y, w, h em milésimos do quadro inteiro (0 a 1000).\n'+
     '• "alerta": se o vídeo não combinar com o perfil (palavrão, algo contra a fé, nicho fora), explique em uma linha; senão "".\n\n'+
     'Responda só com JSON: {"assunto":"","nicho":"","emocao":"","nota_original":0,"criterios":{"identificacao":0,"envio":0,"clareza":0,"emocao":0,"coerencia":0},'+
     '"frase_original":"","frase_escolhida":"","por_que_original":"","alternativas":[{"frase":"","nota":0,"por_que":""}],"rodape":"","rodape_motivo":"",'+
-    '"marca_dagua_terceiro":{"detectada":false,"area":{"x":0,"y":0,"w":0,"h":0}},"legenda":"","comentario_fixado":"","corte_inicio_seg":0,"alerta":""}';
+    '"legenda":"","comentario_fixado":"","corte_inicio_seg":0,"alerta":""}';
   let out;
   try{out=await sample.json(prompt,{images:imgs.length?imgs:undefined,signal:planCtl.signal,cache:false});}
   catch(e){
@@ -1137,11 +1096,6 @@ async function connectionPlan(orig){
   }
   if(seq!==planSeq)return null;
   plan=chooseFrase(plan);
-  // marca d'água: área marcada por você > OCR (preciso) > estimativa da IA
-  const ocr=await ocrP;if(seq!==planSeq)return null;
-  if(!(state.wm&&state.wm.src==='manual'))state.wm=ocr||plan._aiArea||null;
-  const wm=state.wm;
-  plan.marca_dagua_terceiro={detectada:!!wm,area:wm?{x:Math.round(wm.x),y:Math.round(wm.y),w:Math.round(wm.w),h:Math.round(wm.h)}:{x:0,y:0,w:0,h:0}};
   state.plan=plan;state.rodape=plan.rodape;state.corte=plan.corte_inicio_seg;
   $('txt').value=plan.frase_escolhida;
   window.estudioUltimoPlano=planPublic(plan); // para conferir o JSON no console
@@ -1149,10 +1103,6 @@ async function connectionPlan(orig){
   return plan;
 }
 function notaDe(frase){const p=state.plan;if(!p)return null;if(frase===p.frase_original)return p.nota_original;const a=p.alternativas.find(x=>x.frase===frase);return a?a.nota:null;}
-function updateWmMsg(){
-  const m=$('wmMsg');if(!m)return;
-  m.textContent=!state.wm?'Nenhuma marca encontrada':state.wm.src==='manual'?'Área marcada por você: o selo cobre':"Marca d'água de terceiro detectada e coberta";
-}
 function renderRodSel(){
   const sel=$('rodSel'),lib=rodapeLib();sel.textContent='';
   for(const [k,v] of Object.entries(lib)){const g=document.createElement('optgroup');g.label=k;for(const x of v){const o=document.createElement('option');o.value=o.textContent=x;g.appendChild(o);}sel.appendChild(g);}
@@ -1161,7 +1111,7 @@ function renderRodSel(){
 }
 function renderPlan(st,err){
   $('planSec').hidden=false;const p=state.plan,ps=$('planStatus');
-  renderRodSel();updateWmMsg();$('cutIn').value=String(state.corte||0);
+  renderRodSel();$('cutIn').value=String(state.corte||0);
   if(st==='loading'){$('scBefore').textContent='…';$('scAfter').textContent='…';$('crit').textContent='';$('altList').textContent='';$('planWhy').textContent='';
     ps.className='status';ps.textContent="Analisando a conexão: assunto, nota, frase, rodapé e marca d'água…";return;}
   if(!p){
