@@ -1859,6 +1859,7 @@ async function autoLoop(){
     try{sb=await vprClient();if(!await vprUser())throw new Error('Entre na Conexão VPR (menu ⋮).');}
     catch(e){autoStop(autoErro(e));return;}
     if(auto.busy){await autoSleep(2000);continue;} // revisão em andamento
+    if(await checkUpdate())return; // versão nova publicada: recarrega e o rastreio volta sozinho
     let v=null;
     try{await refreshFila(sb);v=await claimNext(sb);}
     catch(e){setStep('Erro ao ler a fila',0);autoWarn(autoErro(e));await autoSleep(30000);continue;}
@@ -1941,6 +1942,20 @@ function resumeAuto(){
 }
 // prévia pequena do card que está sendo feito
 setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').getContext('2d').drawImage(cv,0,0,270,480);}catch(e){}},1000);
+
+/* atualização sozinha: compara a versão do sw.js publicado com a desta página.
+   Recarrega só quando nada está sendo editado (sem vídeo aberto no editor e sem render em andamento). */
+let APP_VER=null;
+async function swVer(){try{const t=await (await fetch('sw.js?v='+Date.now(),{cache:'no-store'})).text();return (/VERSION = "([^"]+)"/.exec(t)||[])[1]||null;}catch(e){return null;}}
+if(!IN_VIEWER)swVer().then(v=>{APP_VER=v;});
+async function checkUpdate(){
+  if(IN_VIEWER||!APP_VER||auto.busy||state.exporting||state.hasVideo)return false;
+  const v=await swVer();if(!v||v===APP_VER)return false;
+  autoWarn('Versão nova do Estúdio: atualizando…');
+  try{const r=await navigator.serviceWorker?.getRegistration();if(r)await r.update();}catch(e){}
+  location.reload();return true;
+}
+setInterval(()=>{if(!auto.on)checkUpdate();},10*60e3); // parado ou no editor vazio: confere a cada 10 min
 
 /* revisão: trocar pela frase alternativa, re-renderizar e sobrescrever o mesmo número */
 async function openReview(id){
