@@ -375,6 +375,9 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
           <option value="manual">Só quando eu mandar</option>
         </select>
       </label>
+      <label class="f">Quais perfis editar
+        <select id="autoPerfil"><option value="">Todos os perfis</option></select>
+      </label>
       <button class="btn gold big" id="scanBtn" type="button">Rastrear e editar agora</button>
       <span class="status" id="autoState"></span>
       <p class="hint">Com o Estúdio aberto, o rastreio volta sozinho quando você abre a página. Deixe o Mac ligado; a tela fica acesa enquanto ele trabalha.</p>
@@ -1747,22 +1750,41 @@ async function vprClient(){
 }
 async function vprUser(){try{const sb=await vprClient();const {data}=await sb.auth.getSession();return data?.session?.user||null;}catch(e){return null;}}
 function setStep(t,pct){$('autoStep').textContent=t;if(pct!=null)$('autoBar').style.width=Math.max(0,Math.min(100,pct))+'%';}
-function setCur(v){$('autoCur').textContent=v?'video-'+v.numero+(v.autor_origem?' · @'+String(v.autor_origem).replace(/^@/,''):''):'—';}
+function setCur(v){$('autoCur').textContent=v?'video-'+v.numero+' · '+contaRotulo(v.conta_id):'—';}
+/* ---------- perfis do VPR: cada vídeo traz a conta (conta_id) escolhida ao colar o link no VPR ---------- */
+const PERFIL_KEY='estudioCards.vpr.perfil';
+function perfilEscolhido(){return lsGet(PERFIL_KEY)||'';}
+function contaRotulo(id){const c=(auto.contas||[]).find(x=>x.id===(id||'conta1'));if(!c)return id||'perfil principal';const ed=(c.ia_config&&c.ia_config.edicao)||{};return ed.perfil||c.nome;}
+function filtroConta(q){const p=perfilEscolhido();if(!p)return q;return p==='conta1'?q.or('conta_id.is.null,conta_id.eq.conta1'):q.eq('conta_id',p);}
+async function carregarContasVpr(sb){
+  try{const {data}=await sb.from('contas').select('id,nome,ia_config').order('id');if(data)auto.contas=data;}catch(e){}
+  const sel=$('autoPerfil'),atual=perfilEscolhido();sel.textContent='';
+  const o0=document.createElement('option');o0.value='';o0.textContent='Todos os perfis';sel.appendChild(o0);
+  (auto.contas||[]).forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=contaRotulo(c.id)+(contaRotulo(c.id)!==c.nome?' · '+c.nome:'');sel.appendChild(o);});
+  sel.value=(auto.contas||[]).some(c=>c.id===atual)?atual:'';
+}
+$('autoPerfil').onchange=e=>{lsSet(PERFIL_KEY,e.target.value);vprClient().then(sb=>refreshFila(sb)).catch(()=>{});};
 function autoWarn(t){$('autoWarn').textContent=t||'';}
 async function refreshFila(sb){
-  const {count}=await sb.from('videos').select('id',{count:'exact',head:true}).eq('status','na_fila');
-  $('autoFila').textContent=count==null?'—':String(count);
+  await carregarContasVpr(sb);
+  const {data}=await sb.from('videos').select('conta_id').eq('status','na_fila').limit(1000);
+  if(!data){$('autoFila').textContent='—';return;}
+  const por={};data.forEach(v=>{const k=contaRotulo(v.conta_id);por[k]=(por[k]||0)+1;});
+  const p=perfilEscolhido(),meus=p?data.filter(v=>(v.conta_id||'conta1')===p).length:data.length;
+  const det=Object.entries(por).map(([k,n])=>k+' '+n).join(' · ');
+  $('autoFila').textContent=String(meus)+(det&&(Object.keys(por).length>1||p)?' ('+det+')':'');
 }
 async function renderAutoList(sb){
   sb=sb||await vprClient();
-  const {data}=await sb.from('videos').select('id,numero,status,autor_origem,erro_msg,frases_alternativas,updated_at')
-    .in('status',['pronto','erro']).order('updated_at',{ascending:false}).limit(6);
+  if(!auto.contas)await carregarContasVpr(sb);
+  const {data}=await filtroConta(sb.from('videos').select('id,numero,status,autor_origem,erro_msg,frases_alternativas,updated_at,conta_id')
+    .in('status',['pronto','erro'])).order('updated_at',{ascending:false}).limit(8);
   auto.list=data||[];const box=$('autoList');box.textContent='';
   if(!auto.list.length){const p=document.createElement('p');p.className='hint';p.textContent='Nada pronto ainda.';box.appendChild(p);return;}
   const frases=lsGet(VPR_FRASES)||{};
   auto.list.forEach(v=>{
     const b=document.createElement('button');b.type='button';b.className='autoItem'+(v.status==='erro'?' err':'');
-    const n=document.createElement('b');n.textContent='video-'+v.numero+(v.status==='erro'?' · erro':'');
+    const n=document.createElement('b');n.textContent='video-'+v.numero+' · '+contaRotulo(v.conta_id)+(v.status==='erro'?' · erro':'');
     const t=document.createElement('span');t.textContent=v.status==='erro'?(v.erro_msg||''):(frases[v.numero]||(v.autor_origem?'@'+v.autor_origem:'pronto'));
     b.append(n,t);if(v.status==='pronto')b.onclick=()=>openReview(v.id);else b.disabled=true;
     box.appendChild(b);
@@ -1772,8 +1794,8 @@ async function renderAutoList(sb){
 async function claimNext(sb){
   const velho=new Date(Date.now()-20*60e3).toISOString(); // destrava quem ficou preso em "editando" (Estúdio fechado no meio)
   await sb.from('videos').update({status:'na_fila'}).eq('status','editando').lt('updated_at',velho);
-  const {data,error}=await sb.from('videos').select('id,numero,autor_origem,arquivo_entrada,legenda_origem,conta_id,ordem')
-    .eq('status','na_fila').order('numero',{ascending:true}).limit(5);
+  const {data,error}=await filtroConta(sb.from('videos').select('id,numero,autor_origem,arquivo_entrada,legenda_origem,conta_id,ordem')
+    .eq('status','na_fila')).order('numero',{ascending:true}).limit(5);
   if(error)throw new Error(error.message);
   for(const v of data||[]){
     const {data:got}=await sb.from('videos').update({status:'editando',erro_msg:null}).eq('id',v.id).eq('status','na_fila').select('id');
