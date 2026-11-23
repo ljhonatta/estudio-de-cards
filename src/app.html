@@ -441,6 +441,7 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
       <label class="check"><input type="checkbox" data-opt="selo"> Mostrar o selo "Siga o @…" sobre o vídeo</label>
       <label class="f">@ do selo (vazio = o mesmo do cabeçalho)<input type="text" id="cfgSelo" maxlength="40"></label>
       <label class="check"><input type="checkbox" data-opt="rodape"> Mostrar o rodapé de repost (🔁) embaixo do vídeo</label>
+      <label class="check"><input type="checkbox" data-opt="preencher"> Vídeo ocupa toda a parte de baixo (corta as bordas, sem faixas)</label>
       <label class="f">Biblioteca de rodapés: uma linha com o nome da categoria e, embaixo, as frases (começam com 🔁, até 45 caracteres)
         <textarea id="cfgRod" style="min-height:300px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
       <div class="file"><button class="btn gold" id="cfgCardSave" type="button">Salvar</button><button class="btn" id="cfgRodReset" type="button">Voltar à biblioteca padrão</button></div>
@@ -589,17 +590,18 @@ function boxH(){
 function draw(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   // tudo cabe na área 4:5 do Feed (y 285 a 1635), com folga
-  const showRod=!!state.rodape&&cardOpt('rodape');
+  const fill=preencher(),showRod=!fill&&!!state.rodape&&cardOpt('rodape');
   const AVAIL=FEED_BOT-FEED_TOP-80,headH=120,gap1=48,gap2=48,MINBOX=420,FOOT=showRod?84:0;
   let size=state.size,lh,lines,textH;
   for(;;){
     lh=Math.round(size*1.2);ctx.font=`800 ${size}px Montserrat, system-ui, sans-serif`;
     lines=wrap($('txt').value.trim()||' ',W-PAD*2);textH=lines.length*lh;
-    if(headH+gap1+textH+gap2+MINBOX+FOOT<=AVAIL||size<=40)break;size-=2;
+    if((fill?headH+gap1+textH+gap2<=560:headH+gap1+textH+gap2+MINBOX+FOOT<=AVAIL)||size<=40)break;size-=2;
   }
   state.fitSize=size;
-  const bh=Math.max(300,Math.min(boxH(),AVAIL-(headH+gap1+textH+gap2+FOOT)));
-  const top=Math.round((H-(headH+gap1+textH+gap2+bh+FOOT))/2);
+  let bh=Math.max(300,Math.min(boxH(),AVAIL-(headH+gap1+textH+gap2+FOOT)));
+  // preencher: cabeçalho e frase no topo da área do Feed; o vídeo ocupa toda a largura até o fim da tela
+  const top=fill?FEED_TOP+10:Math.round((H-(headH+gap1+textH+gap2+bh+FOOT))/2);
   const ax=PAD,ay=top,ar=60;
   ctx.save();ctx.beginPath();ctx.arc(ax+ar,ay+ar,ar,0,Math.PI*2);ctx.clip();
   if(avatar.complete&&avatar.naturalWidth){const s=Math.min(avatar.naturalWidth,avatar.naturalHeight);ctx.drawImage(avatar,(avatar.naturalWidth-s)/2,(avatar.naturalHeight-s)/2,s,s,ax,ay,ar*2,ar*2);}
@@ -618,12 +620,13 @@ function draw(){
   let y=top+headH+gap1+size;
   for(const l of lines){ctx.fillText(l,x0,y);y+=lh;}
   const by=top+headH+gap1+textH+gap2;
+  if(fill)bh=H-by;
   const vsrc=state.frameSrc||vid;
   if(state.scene){ // recorte da cena (guardado para o render quadro a quadro)
     const t=state.scene,z=state.zoom,target=W/bh;
     let sw=t.w/z,sh=t.h/z; if(sw/sh>target)sw=sh*target; else sh=sw/target;
     const perda=1-(sw*sh)/((t.w/z)*(t.h/z));
-    if(z<=1.001&&perda>.2){ // encaixar: mostra a cena inteira sem cortar
+    if(!fill&&z<=1.001&&perda>.2){ // encaixar: mostra a cena inteira sem cortar
       const k=Math.min(W/t.w,bh/t.h),dw=t.w*k,dh=t.h*k;
       state.layout={by,bh,sx:t.x,sy:t.y,sw:t.w,sh:t.h,dx:(W-dw)/2,dy:by+(bh-dh)/2,dw,dh};
     }else state.layout={by,bh,sx:t.x+(t.w-sw)/2,sy:t.y+(t.h-sh)*state.pos,sw,sh,dx:0,dy:by,dw:W,dh:bh};
@@ -654,6 +657,7 @@ function seloBox(){
   const txt='Siga o '+seloHandle();
   const h0=Math.round(Math.max(64,L.bh*.075));
   const r={x:W/2,y:L.by+L.bh*5/6-h0/2,w:0,h:h0}; // centro do terço inferior do vídeo
+  if(preencher())r.y=Math.min(r.y,FEED_BOT-90-h0); // vídeo até o fim da tela: selo dentro da área do Feed e acima da legenda do Reels
   if(r.h<56){const cy=r.y+r.h/2;r.h=56;r.y=cy-28;}
   let fs=Math.round(Math.min(r.h*.5,48));ctx.font=`800 ${fs}px Montserrat, system-ui, sans-serif`;
   let need=ctx.measureText(txt).width+fs*1.4;
@@ -1797,7 +1801,24 @@ function freeMemory(){
   if(ocrWorker){ocrWorker.then(w=>w.terminate()).catch(()=>{});ocrWorker=null;}
 }
 function autoErro(e){return String((e&&e.message)||e||'erro desconhecido').slice(0,400);}
+// perfil do card conforme a conta do vídeo (ex.: Trader School) e o enquadramento dela
+async function perfilDaConta(sb,contaId){
+  if(!contaId)return {prof:null,fill:null};
+  const {data}=await sb.from('contas').select('id,nome,ia_config').eq('id',contaId).maybeSingle();
+  if(!data)return {prof:null,fill:null};
+  const ed=(data.ia_config&&data.ia_config.edicao)||{},h=String(data.nome||'').toLowerCase().trim();
+  const prof=profiles.find(p=>String(p.handle||'').toLowerCase()===h)||(ed.perfil?profiles.find(p=>String(p.name||'').toLowerCase().includes(String(ed.perfil).toLowerCase())):null);
+  if(!prof&&ed.perfil)throw new Error(`Crie o perfil ${data.nome} (${ed.perfil}) no Estúdio: menu ⋮ → Perfis, com o mesmo @.`);
+  return {prof,fill:typeof ed.preencher==='boolean'?ed.preencher:null};
+}
 async function autoProcess(sb,v){
+  const pv=await perfilDaConta(sb,v.conta_id),antes=curId;
+  if(pv.prof){curId=pv.prof.id;applyProfile();state.seloH=pv.prof.handle;}
+  state.fill=pv.fill;
+  try{await autoProcessCore(sb,v);}
+  finally{curId=antes;applyProfile();state.seloH=null;state.fill=null;}
+}
+async function autoProcessCore(sb,v){
   const N=v.numero;setCur(v);autoWarn('');
   // tira um pronto antigo deste número: senão o VPR (que olha prontos/ a cada 30 s) marca "pronto" com o arquivo velho
   try{await sb.storage.from(vprBucket()).remove([`prontos/video-${N}.mp4`,`prontos/legenda-${N}.txt`]);}catch(e){}
@@ -1960,7 +1981,7 @@ setInterval(()=>{if(!auto.on)checkUpdate();},10*60e3); // parado ou no editor va
 /* revisão: trocar pela frase alternativa, re-renderizar e sobrescrever o mesmo número */
 async function openReview(id){
   const box=$('autoRev');box.hidden=false;box.textContent='Carregando…';
-  let v;try{const sb=await vprClient();const {data,error}=await sb.from('videos').select('id,numero,status,frases_alternativas,arquivo_entrada,autor_origem').eq('id',id).single();if(error)throw error;v=data;}
+  let v;try{const sb=await vprClient();const {data,error}=await sb.from('videos').select('id,numero,status,frases_alternativas,arquivo_entrada,autor_origem,conta_id').eq('id',id).single();if(error)throw error;v=data;}
   catch(e){box.textContent='Não consegui abrir: '+autoErro(e);return;}
   const atual=(lsGet(VPR_FRASES)||{})[v.numero]||'';
   const alts=Array.isArray(v.frases_alternativas)?v.frases_alternativas.filter(x=>typeof x==='string'&&x.trim()):[];
@@ -1979,9 +2000,12 @@ async function openReview(id){
 async function reRender(v,frase,atual,alts,st){
   if(auto.busy){st.className='status warn';st.textContent='Espere o vídeo atual terminar.';return;}
   auto.busy=true;autoUI();st.className='status';
-  let sb,claimed=false,done=false;
+  let sb,claimed=false,done=false;const antes=curId;
   try{
     sb=await vprClient();
+    const pv=await perfilDaConta(sb,v.conta_id); // mesmo perfil e enquadramento do modo automático
+    if(pv.prof){curId=pv.prof.id;applyProfile();state.seloH=pv.prof.handle;}
+    state.fill=pv.fill;
     // trava em "editando" para o VPR não postar no meio do re-render
     const {data:got}=await sb.from('videos').update({status:'editando'}).eq('id',v.id).eq('status','pronto').select('id');
     if(!got||!got.length)throw new Error('o vídeo saiu de Pronto (pode ter sido postado).');
@@ -2006,6 +2030,7 @@ async function reRender(v,frase,atual,alts,st){
   }catch(e){
     st.className='status warn';st.textContent='Não deu: '+autoErro(e)+' O vídeo anterior continua em Pronto.';
   }finally{
+    curId=antes;applyProfile();state.seloH=null;state.fill=null;
     if(claimed&&sb){try{await sb.from('videos').update({status:'pronto'}).eq('id',v.id).eq('status','editando');}catch(_){}}
     auto.busy=false;setCur(null);freeMemory();autoUI();
     try{await renderAutoList();}catch(_){}
@@ -2117,7 +2142,9 @@ const DEFAULT_RODAPES={
   'Humor / identificação':['🔁 Marca quem faz isso','🔁 Reposta se você já passou por isso']
 };
 const CARDOPT_KEY='estudioCards.cardOpts';
-function cardOpt(k){const o=lsGet(CARDOPT_KEY)||{};return o[k]!==false;}
+function cardOpt(k){const o=lsGet(CARDOPT_KEY)||{};return k==='preencher'?o[k]===true:o[k]!==false;}
+// vídeo ocupando toda a parte de baixo (corta as bordas): ajuste do aparelho ou do perfil do vídeo no modo automático
+function preencher(){return state.fill!=null?!!state.fill:cardOpt('preencher');}
 function setCardOpt(k,v){const o=lsGet(CARDOPT_KEY)||{};o[k]=!!v;lsSet(CARDOPT_KEY,o);syncOptBoxes();}
 function syncOptBoxes(){document.querySelectorAll('[data-opt]').forEach(b=>{b.checked=cardOpt(b.dataset.opt);});}
 document.querySelectorAll('[data-opt]').forEach(b=>b.addEventListener('change',()=>{setCardOpt(b.dataset.opt,b.checked);cloudSave();}));
@@ -2130,7 +2157,7 @@ function textToLib(t){
     if(l.startsWith('🔁'))(out[cat]=out[cat]||[]).push(l.slice(0,47));else cat=l.replace(/:$/,'');}
   return out;
 }
-function seloHandle(){let h=String(lsGet(SELO_KEY)||'').trim()||curProf().handle||'@ojhonatta1';if(!h.startsWith('@'))h='@'+h;return h;}
+function seloHandle(){let h=String(state.seloH||lsGet(SELO_KEY)||'').trim()||curProf().handle||'@ojhonatta1';if(!h.startsWith('@'))h='@'+h;return h;}
 async function cloudCtx(){try{if(IN_VIEWER||!vprCfg().url)return null;const u=await vprUser();if(!u)return null;return {sb:await vprClient(),u};}catch(e){return null;}}
 function pushRodapeHist(r,numero){
   lsSet(ROD_HIST,[r,...rodapeHist().filter(x=>x!==r)].slice(0,5));
