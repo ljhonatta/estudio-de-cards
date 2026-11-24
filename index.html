@@ -337,6 +337,9 @@ body.autoRun .manual{pointer-events:none;opacity:.55}
         <label class="f">Começar o vídeo em (segundos; 0 = do início)
           <div class="inl"><input type="text" id="cutIn" inputmode="decimal" value="0"><span class="hint" id="cutWhy"></span></div>
         </label>
+        <label class="f">Terminar o vídeo em (segundos; 0 = até o fim)
+          <div class="inl"><input type="text" id="cutEnd" inputmode="decimal" value="0"><span class="hint" id="cutEndWhy"></span></div>
+        </label>
         <label class="f">Legenda (uma ação só)<textarea id="planLeg" style="min-height:150px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
         <div class="file"><button class="btn" id="copyLeg" type="button">Copiar legenda</button></div>
         <label class="f">Comentário para fixar<textarea id="planCom" style="min-height:64px;font-family:var(--body);font-weight:500;font-size:16px"></textarea></label>
@@ -746,8 +749,11 @@ async function analyze(){
   const N=7,frames=[],dur=vid.duration||1;state.shots=[];
   const shotW=Math.min(560,vw),shotH=Math.round(shotW*vh/vw);
   for(let i=0;i<N;i++){await seekTo(dur*(0.08+0.84*i/(N-1)));o.drawImage(vid,0,0,sw,sh);
-    {const sc=document.createElement('canvas');sc.dataset.t=vid.currentTime.toFixed(1);sc.width=shotW;sc.height=shotH;sc.getContext('2d').drawImage(vid,0,0,shotW,shotH);state.shots.push(sc);}
+    {const sc=document.createElement('canvas');sc.dataset.t=vid.currentTime.toFixed(1);sc.dataset.main='1';sc.width=shotW;sc.height=shotH;sc.getContext('2d').drawImage(vid,0,0,shotW,shotH);state.shots.push(sc);}
     const d=o.getImageData(0,0,sw,sh).data,g=new Float32Array(sw*sh);for(let p=0;p<sw*sh;p++)g[p]=.3*d[p*4]+.59*d[p*4+1]+.11*d[p*4+2];frames.push(g);}
+  // 2 quadros bem do fim: é onde costuma estar a propaganda do autor original (livro, curso, link na bio)
+  if(dur>6)for(const t of [dur-1.6,dur-0.4]){await seekTo(t);const sc=document.createElement('canvas');sc.dataset.t=vid.currentTime.toFixed(1);sc.width=shotW;sc.height=shotH;sc.getContext('2d').drawImage(vid,0,0,shotW,shotH);state.shots.push(sc);}
+  state.shots.sort((a,b)=>a.dataset.t-b.dataset.t);
   // frame do meio em resolução maior para o mapa e a leitura do texto
   await seekTo(dur*0.5);
   const mf=document.createElement('canvas');const ms=Math.min(1,1400/vw);mf.width=Math.round(vw*ms);mf.height=Math.round(vh*ms);
@@ -767,6 +773,13 @@ async function analyze(){
     if(bx1-bx0>sw*.3)cr=[Math.min(cr[0],Math.max(0,bx0-1)),Math.max(cr[1],Math.min(sw-1,bx1+1))];
     scene={x:Math.max(0,cr[0]+1)*k,y:(rr[0]+1)*k,w:Math.min(sw,cr[1]-cr[0]-1)*k,h:(rr[1]-rr[0]-1)*k};
   }
+  // vídeo dentro de uma moldura (cópia borrada ou faixas lisas): usa exatamente o quadro nítido
+  let semTexto=false;
+  const cb=detectContentBox(state.shots.filter(x=>x.dataset.main));
+  if(cb){
+    const b=cb.box,ov=scene?Math.max(0,Math.min(scene.x+scene.w,b.x+b.w)-Math.max(scene.x,b.x))*Math.max(0,Math.min(scene.y+scene.h,b.y+b.h)-Math.max(scene.y,b.y)):1;
+    if(!scene||ov>=.5*Math.min(scene.w*scene.h,b.w*b.h)){scene=b;semTexto=cb.blurOut;} // moldura borrada: o texto está dentro do quadro, não é frase de repost
+  }
   // conteúdo estático (texto): linhas com contraste fora da cena
   const mid=frames[Math.floor(N/2)];
   const rowStd=y=>{let s=0,s2=0;for(let x=0;x<sw;x++){const v=mid[y*sw+x];s+=v;s2+=v*v;}const m=s/sw;return Math.sqrt(Math.max(0,s2/sw-m*m));};
@@ -780,17 +793,51 @@ async function analyze(){
   for(let y=0;y<sTop-2;y++)if(content[y]>12)above.push(y);
   for(let y=sBot+2;y<sh;y++)if(content[y]>12)below.push(y);
   const band=above.length?above:below;let text=null;
-  if(band.length){
+  if(band.length&&!semTexto){
     const y0=band[0],y1=band[band.length-1];let x0=sw,x1=0;
     for(let y=y0;y<=y1;y++)for(let x=1;x<sw;x++){if(Math.abs(mid[y*sw+x]-mid[y*sw+x-1])>40){if(x<x0)x0=x;if(x>x1)x1=x;}}
-    if(x1<=x0){x0=0;x1=sw-1;}
-    const p=3;text={x:Math.max(0,(x0-p)*k),y:Math.max(0,(y0-p)*k),w:Math.min(vw,(x1-x0+2*p)*k),h:Math.min(vh,(y1-y0+2*p)*k)};
+    if(x1<=x0&&!cb){x0=0;x1=sw-1;} // com moldura, faixa sem letras nítidas é só o fundo borrado: não é texto
+    const p=3;if(x1>x0)text={x:Math.max(0,(x0-p)*k),y:Math.max(0,(y0-p)*k),w:Math.min(vw,(x1-x0+2*p)*k),h:Math.min(vh,(y1-y0+2*p)*k)};
   }
   state.scene=clampRect(scene);state.text=text?clampRect(text):null;
   state.analyzing=false;$('mapBox').hidden=false;drawMap();
   $('anStatus').className='status ok';
   $('anStatus').textContent=state.text?'Cena e texto detectados. Confira as áreas abaixo.':'Cena detectada. Não achei texto: marque a área do texto ou escreva a frase.';
   await seekTo(0);if(!state.paused)vid.play().catch(()=>{});
+}
+// Acha o quadro do vídeo quando ele vem dentro de uma moldura (cópia borrada do próprio vídeo ou faixas lisas):
+// bordas retas que atravessam a imagem na maioria dos quadros + região de fora sem detalhe nítido.
+function detectContentBox(shots){
+  if(!shots||shots.length<3)return null;
+  const A=180,H2=Math.max(32,Math.round(A*shots[0].height/shots[0].width)),n=shots.length;
+  const c=document.createElement('canvas');c.width=A;c.height=H2;const cx=c.getContext('2d',{willReadFrequently:true});
+  const rowHit=new Uint16Array(H2),det=new Float32Array(A*H2),gs=[];
+  for(const sc of shots){
+    cx.drawImage(sc,0,0,A,H2);const d=cx.getImageData(0,0,A,H2).data,g=new Float32Array(A*H2);
+    for(let q=0;q<A*H2;q++)g[q]=.3*d[q*4]+.59*d[q*4+1]+.11*d[q*4+2];gs.push(g);
+    for(let y=1;y<H2-1;y++){let h=0;for(let x=0;x<A;x++)if(Math.abs(g[(y+1)*A+x]-g[(y-1)*A+x])>18)h++;if(h>A*.8)rowHit[y]++;}
+    for(let y=1;y<H2-1;y++)for(let x=1;x<A-1;x++){const q=y*A+x;det[q]+=(Math.abs(g[q+1]-g[q-1])+Math.abs(g[q+A]-g[q-A]))/n;}
+  }
+  const need=Math.max(2,Math.ceil(n*.6));
+  let top=0,bot=H2-1;
+  for(let y=Math.round(H2*.03);y<H2*.6;y++)if(rowHit[y]>=need){top=y;break;}
+  for(let y=Math.round(H2*.97);y>H2*.4;y--)if(rowHit[y]>=need){bot=y;break;}
+  if(bot-top<H2*.2)return null;
+  const colHit=new Uint16Array(A);
+  for(const g of gs)for(let x=1;x<A-1;x++){let h=0;for(let y=top;y<=bot;y++)if(Math.abs(g[y*A+x+1]-g[y*A+x-1])>18)h++;if(h>(bot-top)*.8)colHit[x]++;}
+  let left=0,right=A-1;
+  for(let x=Math.round(A*.03);x<A*.6;x++)if(colHit[x]>=need){left=x;break;}
+  for(let x=Math.round(A*.97);x>A*.4;x--)if(colHit[x]>=need){right=x;break;}
+  if(top===0&&bot===H2-1&&left===0&&right===A-1)return null; // sem moldura
+  if(right-left<A*.3)return null;
+  // como é a região de fora: borrada (detalhe suave) ou lisa? Se tiver detalhe nítido, não é moldura.
+  let fl=0,ge=0,sh=0,t=0;
+  for(let y=0;y<H2;y++)for(let x=0;x<A;x++){if(y>=top&&y<=bot&&x>=left&&x<=right)continue;const v=det[y*A+x];if(v<1.5)fl++;else if(v<14)ge++;else sh++;t++;}
+  if(!t)return null;
+  const blurOut=ge/t>.55&&sh/t<.04,flatOut=fl/t>.6;
+  if(!blurOut&&!flatOut)return null;
+  const vw=vid.videoWidth,vh=vid.videoHeight,p=1;
+  return {box:{x:(left+p)/A*vw,y:(top+p)/H2*vh,w:(right-left-2*p)/A*vw,h:(bot-top-2*p)/H2*vh},blurOut};
 }
 function clampRect(r){const vw=vid.videoWidth,vh=vid.videoHeight;const x=Math.max(0,Math.min(r.x,vw-8)),y=Math.max(0,Math.min(r.y,vh-8));return {x,y,w:Math.max(8,Math.min(r.w,vw-x)),h:Math.max(8,Math.min(r.h,vh-y))};}
 
@@ -824,7 +871,7 @@ map.addEventListener('pointercancel',()=>{drag=null;drawMap();});
 const IN_VIEWER=!!(window.claude&&window.claude.use);
 const CFG_KEY='estudioCards.ia';
 const SERVER_URL='https://estudio-de-cards.vercel.app';
-const AI_LIMITS=async()=>({maxPromptBytes:262144,images:{maxCount:7,maxInputBytes:5e6,mediaTypes:['image/jpeg']}});
+const AI_LIMITS=async()=>({maxPromptBytes:262144,images:{maxCount:9,maxInputBytes:5e6,mediaTypes:['image/jpeg']}});
 const JSON_ONLY='\n\nResponda somente com o JSON pedido, sem nenhum texto antes ou depois.';
 function iaCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'{}')||{};}catch(e){return {};}}
 function parseLoose(t){
@@ -842,7 +889,7 @@ function openaiAI(cfg){
   const json=async(prompt,o={})=>{
     const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
     const content=[];
-    for(const b of imgs.slice(0,7))content.push({type:'image_url',image_url:{url:'data:image/jpeg;base64,'+await blobB64(b)}});
+    for(const b of imgs.slice(0,9))content.push({type:'image_url',image_url:{url:'data:image/jpeg;base64,'+await blobB64(b)}});
     content.push({type:'text',text:prompt+JSON_ONLY});
     let r;
     try{
@@ -862,7 +909,7 @@ function directAI(cfg){
   const json=async(prompt,o={})=>{
     const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
     const content=[];
-    for(const b of imgs.slice(0,7))content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:await blobB64(b)}});
+    for(const b of imgs.slice(0,9))content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:await blobB64(b)}});
     content.push({type:'text',text:prompt+JSON_ONLY});
     let r;
     try{
@@ -883,7 +930,7 @@ function serverSession(){const x=lsGet(SES_KEY);return x&&x.mode==='server'&&x.t
 function serverAI(base,token){
   const json=async(prompt,o={})=>{
     const imgs=o.images?(o.images instanceof Blob?[o.images]:Array.from(o.images)):[];
-    const images=[];for(const b of imgs.slice(0,7))images.push(await blobB64(b));
+    const images=[];for(const b of imgs.slice(0,9))images.push(await blobB64(b));
     let r;
     try{
       r=await fetch(base+'/api/ai',{method:'POST',signal:o.signal,headers:{'content-type':'application/json',authorization:'Bearer '+token},
@@ -1057,7 +1104,19 @@ function normalizePlan(o,orig,lib,hist){
   return {assunto:str(o.assunto),nicho:str(o.nicho),emocao:str(o.emocao),nota_original:nota,criterios:crit,
     frase_original:orig,frase_escolhida:'',alternativas:alts,rodape:rod,rodape_motivo:str(o.rodape_motivo),
     legenda:str(o.legenda),
-    comentario_fixado:str(o.comentario_fixado),corte_inicio_seg:corte,alerta:str(o.alerta),por_que_original:str(o.por_que_original)};
+    comentario_fixado:str(o.comentario_fixado),corte_inicio_seg:corte,corte_fim_seg:corteFim(o.corte_fim_seg,corte),alerta:str(o.alerta),por_que_original:str(o.por_que_original)};
+}
+function corteFim(v,ini){const d=vid.duration||0,t=Number(v)||0;return t>ini+3&&t<d-.3?Math.round(t*10)/10:0;}
+// acha o corte de cena mais forte perto do tempo t (±1,5 s) para terminar exatamente antes da propaganda
+async function snapCut(t){
+  const c=document.createElement('canvas');c.width=48;c.height=Math.max(16,Math.round(48*vid.videoHeight/vid.videoWidth));
+  const x=c.getContext('2d',{willReadFrequently:true});let prev=null,best=0,bestT=t;
+  for(let u=Math.max(.5,t-1.5);u<=Math.min((vid.duration||t)-.05,t+1.5);u+=.25){
+    await seekTo(u);x.drawImage(vid,0,0,c.width,c.height);const d=x.getImageData(0,0,c.width,c.height).data;
+    if(prev){let df=0;for(let i=0;i<d.length;i+=4)df+=Math.abs(d[i]-prev[i])+Math.abs(d[i+1]-prev[i+1])+Math.abs(d[i+2]-prev[i+2]);if(df>best){best=df;bestT=u;}}
+    prev=d;
+  }
+  return Math.max(0,Math.round((bestT-.15)*10)/10); // termina um pouco antes do primeiro quadro da propaganda
 }
 function chooseFrase(p){
   if(p.frase_original&&p.nota_original>=8)p.frase_escolhida=p.frase_original;
@@ -1076,7 +1135,7 @@ async function connectionPlan(orig){
   if(!sample||!sampleOk)return fim('off');
   planCtl?.abort();planCtl=new AbortController();
   let imgs=[];
-  try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(7,lim.images.maxCount||1));}catch(e){}
+  try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(9,lim.images.maxCount||1));}catch(e){}
   const fala=await falaCtx(),p=curProf();
   const perfil=String(p.about||'').trim()||'cristão, empresário, negócios, IA e mentalidade';
   const libTxt=Object.entries(lib).map(([k,v])=>k+':\n'+v.map(x=>'- '+x).join('\n')).join('\n');
@@ -1102,10 +1161,11 @@ async function connectionPlan(orig){
     '• "legenda": gancho na primeira linha, 2 ou 3 parágrafos curtos, CTA final com UMA única ação (comentar, OU marcar, OU seguir), e exatamente 3 hashtags no fim. Não coloque crédito de autor.\n'+
     '• "comentario_fixado": um comentário curto para fixar que puxa conversa.\n'+
     '• "corte_inicio_seg": segundo em que o vídeo deve começar para prender nos 2 primeiros segundos (0 se o começo já é bom; nunca corte uma fala no meio; no máximo 5).\n'+
+    '• "corte_fim_seg": se o vídeo TERMINA com propaganda ou chamada do autor original (livro, curso, produto, "link na bio", "siga", @ de outro perfil, logo ou tela final), o segundo em que essa parte COMEÇA (use o tempo dos quadros); o vídeo será cortado ali. Se não tiver, 0.\n'+
     '• "alerta": se o vídeo não combinar com o perfil (palavrão, algo contra a fé, nicho fora), explique em uma linha; senão "".\n\n'+
     'Responda só com JSON: {"assunto":"","nicho":"","emocao":"","nota_original":0,"criterios":{"identificacao":0,"envio":0,"clareza":0,"emocao":0,"coerencia":0},'+
     '"frase_original":"","frase_escolhida":"","por_que_original":"","alternativas":[{"frase":"","nota":0,"por_que":""}],"rodape":"","rodape_motivo":"",'+
-    '"legenda":"","comentario_fixado":"","corte_inicio_seg":0,"alerta":""}';
+    '"legenda":"","comentario_fixado":"","corte_inicio_seg":0,"corte_fim_seg":0,"alerta":""}';
   let out;
   try{out=await sample.json(prompt,{images:imgs.length?imgs:undefined,signal:planCtl.signal,cache:false});}
   catch(e){
@@ -1130,7 +1190,8 @@ async function connectionPlan(orig){
   }
   if(seq!==planSeq)return null;
   plan=chooseFrase(plan);
-  state.plan=plan;state.rodape=plan.rodape;state.corte=plan.corte_inicio_seg;
+  if(plan.corte_fim_seg){try{plan.corte_fim_seg=await snapCut(plan.corte_fim_seg);await seekTo(0);if(!state.paused)vid.play().catch(()=>{});}catch(e){}if(seq!==planSeq)return null;}
+  state.plan=plan;state.rodape=plan.rodape;state.corte=plan.corte_inicio_seg;state.corteFim=plan.corte_fim_seg||0;
   $('txt').value=plan.frase_escolhida;
   window.estudioUltimoPlano=planPublic(plan); // para conferir o JSON no console
   renderPlan('ok');
@@ -1145,7 +1206,7 @@ function renderRodSel(){
 }
 function renderPlan(st,err){
   $('planSec').hidden=false;const p=state.plan,ps=$('planStatus');
-  renderRodSel();$('cutIn').value=String(state.corte||0);
+  renderRodSel();$('cutIn').value=String(state.corte||0);$('cutEnd').value=String(state.corteFim||0);
   if(st==='loading'){$('scBefore').textContent='…';$('scAfter').textContent='…';$('crit').textContent='';$('altList').textContent='';$('planWhy').textContent='';
     ps.className='status';ps.textContent="Analisando a conexão: assunto, nota, frase, rodapé e marca d'água…";return;}
   if(!p){
@@ -1170,6 +1231,7 @@ function renderPlan(st,err){
   $('planAlert').hidden=!p.alerta;$('planAlert').textContent=p.alerta?'Alerta: '+p.alerta:'';
   $('rodWhy').textContent=p.rodape_motivo||'';
   $('cutWhy').textContent=state.corte?'pula a introdução para prender nos 2 primeiros segundos':'';
+  $('cutEndWhy').textContent=state.corteFim?'corta a propaganda do autor original no final':'';
   if(!$('planLeg').dataset.edited)$('planLeg').value=p.legenda;
   if(!$('planCom').dataset.edited)$('planCom').value=p.comentario_fixado;
   ps.className='status ok';ps.textContent='Card planejado. Confira e toque em Gerar vídeo.';
@@ -1184,6 +1246,7 @@ $('rodSwap').onclick=()=>{
   if(state.plan){state.plan.rodape=state.rodape;state.plan.rodape_motivo='Trocado por você.';}
   renderRodSel();$('rodWhy').textContent='Trocado por você.';
 };
+$('cutEnd').onchange=e=>{const d=vid.duration||0,v=parseFloat(String(e.target.value).replace(',','.'))||0;state.corteFim=v>(state.corte||0)+1&&v<d?Math.round(v*10)/10:0;e.target.value=String(state.corteFim);if(state.plan)state.plan.corte_fim_seg=state.corteFim;};
 $('cutIn').onchange=e=>{const v=Math.max(0,Math.min(Math.max(0,(vid.duration||0)-3),parseFloat(String(e.target.value).replace(',','.'))||0));state.corte=Math.round(v*10)/10;e.target.value=String(state.corte);if(state.plan)state.plan.corte_inicio_seg=state.corte;};
 ['planLeg','planCom'].forEach(id=>$(id).addEventListener('input',e=>{e.target.dataset.edited='1';}));
 $('copyLeg').onclick=()=>copyText($('planLeg').value,$('planStatus'),$('planLeg'));
@@ -1210,12 +1273,14 @@ function renderSugg(orig,list){
 async function sceneBlobs(max){
   const all=state.shots||[],out=[];if(!all.length||max<1)return out;
   const pick=[];for(let i=0;i<Math.min(max,all.length);i++)pick.push(all[Math.round(i*(all.length-1)/Math.max(1,Math.min(max,all.length)-1))]);
+  state.pickTimes=pick.map(sc=>sc.dataset.t);
   for(const sc of pick){try{const b=await new Promise(res=>sc.toBlob(res,'image/jpeg',.8));if(b)out.push(b);}catch(e){}}
   return out;
 }
 function framesNote(n){
   const d=Math.round(vid.duration||0);
-  return n?`As ${n} imagens são quadros completos do vídeo inteiro, em ordem do começo ao fim (vídeo de ${d} s). `+
+  const ts=(state.pickTimes||[]).length===n?' Tempo de cada quadro: '+state.pickTimes.map(t=>t+' s').join(', ')+'.':'';
+  return n?`As ${n} imagens são quadros completos do vídeo inteiro, em ordem do começo ao fim (vídeo de ${d} s).${ts} `+
     'Analise TODAS juntas como uma sequência: o que acontece do começo ao fim, quem fala, o que muda. '+
     'Leia as legendas de fala que aparecem na tela (letras queimadas no vídeo): elas mostram o que está sendo dito. '+
     'Ignore o card parado em cima (nome de perfil, @, frase fixa) e foque no conteúdo e na mensagem do vídeo.\n':'';
@@ -1249,7 +1314,7 @@ async function genSuggestions(orig){
   sugCtl?.abort();sugCtl=new AbortController();
   st.className='status';st.textContent=noText?'Assistindo o vídeo e criando ideias…':'Criando sugestões…';
   let imgs=[];
-  try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(7,lim.images.maxCount||1));}catch(e){}
+  try{const lim=await sample.limits();if(lim?.images)imgs=await sceneBlobs(Math.min(9,lim.images.maxCount||1));}catch(e){}
   const cena=framesNote(imgs.length)+userCtx()+await falaCtx();
   const pedido=noText
     ?'O vídeo NÃO tem frase no card. '+cena+'Primeiro resuma em uma linha do que o vídeo fala e qual a mensagem principal (não descreva só a imagem parada). Depois crie 3 frases de reação com alto potencial de viralizar para esse vídeo, cada uma num ângulo diferente: '+
@@ -1293,7 +1358,7 @@ async function loadVideo(file,opts={}){
   state.hasVideo=false;state.scene=null;state.text=null;state.mapFrame=null;$('mapBox').hidden=true;
   $('exportBtn').disabled=true;$('readBtn').disabled=true;$('playBtn').disabled=true;
   delete $('txt').dataset.touched;$('sugg').hidden=true;state.videoCtx='';lastOrig='';
-  planSeq++;state.plan=null;state.wm=null;state.corte=0;state.rodape='';$('planSec').hidden=true;
+  planSeq++;state.plan=null;state.wm=null;state.corte=0;state.corteFim=0;state.rodape='';$('planSec').hidden=true;
   const seq=state.loadSeq=(state.loadSeq||0)+1;state.transcript='';
   if(!opts.noAI&&transcriber()){showTranscript({state:'loading'});
     state.trP=transcribe(file).then(r=>{if(state.loadSeq===seq){state.transcript=r.text||'';showTranscript(r);}return r;});}
@@ -1397,7 +1462,8 @@ async function openMp4(file){
 async function renderFrames(src,opts){
   if(!window.Mp4Muxer)await loadScript(MUXER_JS);
   const s0=Math.max(0,Math.min(Number(opts.start)||0,src.dur-1)),s0us=s0*1e6; // corte de início
-  const fps=OUT_FPS,step=1e6/fps,total=Math.max(1,Math.round((src.dur-s0)*fps));
+  const e0=Number(opts.end)>s0+1&&Number(opts.end)<src.dur?Number(opts.end):src.dur,e0us=e0*1e6; // corte do fim
+  const fps=OUT_FPS,step=1e6/fps,total=Math.max(1,Math.round((e0-s0)*fps));
   const au=src.audio,pcm=au&&au.mode==='encode'?au.pcm:null,nc=pcm?Math.min(2,pcm.numberOfChannels):au?au.channels:0;
   const muxer=new Mp4Muxer.Muxer({target:new Mp4Muxer.ArrayBufferTarget(),fastStart:'in-memory',firstTimestampBehavior:'offset',
     video:{codec:'avc',width:W,height:H,frameRate:fps},audio:au?{codec:'aac',numberOfChannels:nc,sampleRate:pcm?pcm.sampleRate:au.sampleRate}:undefined});
@@ -1424,6 +1490,7 @@ async function renderFrames(src,opts){
     for(let i=0;i<src.samples.length;i++){
       if(fail)throw fail;
       const x=src.samples[i];
+      if(x.cts/x.timescale>e0+1.5)break; // depois do corte do fim não precisa decodificar
       dec.decode(new EncodedVideoChunk({type:x.is_sync?'key':'delta',timestamp:Math.round(x.cts*1e6/x.timescale),duration:Math.round(x.duration*1e6/x.timescale),data:x.data}));
       while(dec.decodeQueueSize>4)await wait(0,dec);
       while(enc.encodeQueueSize>4)await wait(0,enc);
@@ -1435,7 +1502,7 @@ async function renderFrames(src,opts){
     if(fail)throw fail;
   }finally{if(prev)prev.close();prev=null;state.frameSrc=null;try{dec.close();}catch(e){}try{enc.close();}catch(e){}}
   if(au&&au.mode==='copy'){ // AAC original copiado como está, cortado na duração do vídeo
-    const end=src.dur*1e6;let firstA=true;
+    const end=e0us;let firstA=true;
     for(const x of au.samples){
       const ts=Math.round(x.cts*1e6/x.timescale);if(ts<s0us)continue;if(ts>=end)break;
       muxer.addAudioChunkRaw(new Uint8Array(x.data),'key',ts-s0us,Math.round(x.duration*1e6/x.timescale),
@@ -1446,7 +1513,7 @@ async function renderFrames(src,opts){
   if(pcm){ // áudio que não é AAC → decodificado e recodificado em AAC, cortado na duração do vídeo
     const aenc=new AudioEncoder({output:(c,m)=>muxer.addAudioChunk(c,m),error:e=>{fail=e;}});
     aenc.configure({...AAC,sampleRate:pcm.sampleRate,numberOfChannels:nc});
-    const len=Math.min(pcm.length,Math.round(src.dur*pcm.sampleRate)),N=4096,ch=[...Array(nc)].map((_,c)=>pcm.getChannelData(c)),i0=Math.round(s0*pcm.sampleRate);
+    const len=Math.min(pcm.length,Math.round(e0*pcm.sampleRate)),N=4096,ch=[...Array(nc)].map((_,c)=>pcm.getChannelData(c)),i0=Math.round(s0*pcm.sampleRate);
     for(let i=i0;i<len;i+=N){
       const n=Math.min(N,len-i),data=new Float32Array(n*nc);for(let c=0;c<nc;c++)data.set(ch[c].subarray(i,i+n),c*n);
       const ad=new AudioData({format:'f32-planar',sampleRate:pcm.sampleRate,numberOfFrames:n,numberOfChannels:nc,timestamp:Math.round((i-i0)*1e6/pcm.sampleRate),data});
@@ -1465,7 +1532,7 @@ async function exportFrames(src,opts){
   vid.pause();
   const job=await makeJob(opts);
   let blob;
-  try{blob=await renderFrames(src,{start:state.corte||0,onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
+  try{blob=await renderFrames(src,{start:state.corte||0,end:state.corteFim||0,onProgress:f=>{$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);}});}
   catch(e){state.exporting=false;$('exportBtn').disabled=false;setStatus('Não consegui gerar o vídeo: '+((e&&e.message)||e),'warn');draw();return null;}
   state.blob=blob;state.ext='mp4';
   addOutput(blob,'mp4',job);$('bar').style.width='100%';
@@ -1509,7 +1576,7 @@ async function exportLive(opts={}){
   rec.start(250);
   // conta quadros e vigia a aba: em segundo plano o navegador para de desenhar e o vídeo sai congelado
   let frames=0,sumiu=false;const onVis=()=>{if(document.hidden)sumiu=true;};document.addEventListener('visibilitychange',onVis);
-  let raf;const tick=()=>{frames++;draw();const f=Math.min(1,vid.currentTime/vid.duration);$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);if(!vid.ended)raf=requestAnimationFrame(tick);};
+  let raf;const tick=()=>{frames++;if(state.corteFim&&vid.currentTime>=state.corteFim&&!vid.paused){vid.pause();vid.dispatchEvent(new Event('ended'));}draw();const f=Math.min(1,vid.currentTime/vid.duration);$('bar').style.width=f*100+'%';if(opts.onProgress)opts.onProgress(f);if(!vid.ended)raf=requestAnimationFrame(tick);};
   // fim do vídeo, ou trava de segurança (duração + 30 s) se o navegador parar de tocar
   const ended=new Promise(r=>{vid.addEventListener('ended',()=>r(true),{once:true});setTimeout(()=>r(false),(vid.duration+30)*1000);});
   let played=true;try{await vid.play();}catch(e){played=false;}
@@ -1856,7 +1923,7 @@ async function baixarEntrada(sb,v){
 // libera memória entre vídeos (no iPhone já houve crash em vídeo longo)
 function freeMemory(){
   state.shots=[];state.mapFrame=null;state.hasVideo=false;state.transcript='';state.trP=null;state.pipeP=null;state.srcFile=null;state.frameSrc=null;
-  state.plan=null;state.wm=null;state.corte=0;state.rodape='';
+  state.plan=null;state.wm=null;state.corte=0;state.corteFim=0;state.rodape='';
   try{vid.pause();vid.removeAttribute('src');vid.load();}catch(e){}
   if(srcUrl){URL.revokeObjectURL(srcUrl);srcUrl=null;}
   map.width=map.height=1;$('mapBox').hidden=true;
@@ -2037,7 +2104,7 @@ setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').ge
 
 /* atualização sozinha: compara a versão do sw.js publicado com a desta página.
    Recarrega só quando nada está sendo editado (sem vídeo aberto no editor e sem render em andamento). */
-let APP_VER='a47f4b1fb6';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
+let APP_VER='8319f550e3';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
 async function swVer(){try{const t=await (await fetch('sw.js?v='+Date.now(),{cache:'no-store'})).text();return (/VERSION = "([^"]+)"/.exec(t)||[])[1]||null;}catch(e){return null;}}
 if(!IN_VIEWER&&!APP_VER)swVer().then(v=>{APP_VER=v;});
 async function checkUpdate(){

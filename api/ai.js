@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
   const b = req.body || {};
   const quick = b.tier === "quick";
   const prompt = String(b.prompt || "");
-  const images = (Array.isArray(b.images) ? b.images : []).slice(0, 7).filter((x) => typeof x === "string");
+  const images = (Array.isArray(b.images) ? b.images : []).slice(0, 9).filter((x) => typeof x === "string");
   if (!prompt) return fail(res, 400, "Pedido sem texto.");
 
     let r;
