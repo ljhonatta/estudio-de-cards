@@ -1125,7 +1125,7 @@ function normalizePlan(o,orig,lib,hist){
     legenda:str(o.legenda),
     comentario_fixado:str(o.comentario_fixado),corte_inicio_seg:corte,corte_fim_seg:corteFim(o.corte_fim_seg,corte),alerta:str(o.alerta),por_que_original:str(o.por_que_original)};
 }
-function corteFim(v,ini){const d=vid.duration||0,t=Number(v)||0;return t>ini+3&&t<d-.3?Math.round(t*10)/10:0;}
+function corteFim(v,ini){const d=vid.duration||0,t=Number(v)||0;return t>ini+3&&t<d-.05?Math.round(t*10)/10:0;}
 // acha o corte de cena mais forte perto do tempo t (±1,5 s) para terminar exatamente antes da propaganda
 async function snapCut(t){
   const c=document.createElement('canvas');c.width=48;c.height=Math.max(16,Math.round(48*vid.videoHeight/vid.videoWidth));
@@ -2123,7 +2123,7 @@ setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').ge
 
 /* atualização sozinha: compara a versão do sw.js publicado com a desta página.
    Recarrega só quando nada está sendo editado (sem vídeo aberto no editor e sem render em andamento). */
-let APP_VER='4c5c99e54c';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
+let APP_VER='78bef18bbd';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
 async function swVer(){try{const t=await (await fetch('sw.js?v='+Date.now(),{cache:'no-store'})).text();return (/VERSION = "([^"]+)"/.exec(t)||[])[1]||null;}catch(e){return null;}}
 if(!IN_VIEWER&&!APP_VER)swVer().then(v=>{APP_VER=v;});
 async function checkUpdate(){
