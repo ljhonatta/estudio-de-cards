@@ -610,6 +610,7 @@ function badge(x,y,r){
   ctx.beginPath();ctx.moveTo(-r*.38,0);ctx.lineTo(-r*.08,r*.3);ctx.lineTo(r*.42,-r*.3);
   ctx.strokeStyle='#fff';ctx.lineWidth=r*.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();ctx.restore();
 }
+const CARD_MARGEM=110; // margem de cima e de baixo quando a cena alta passa da área do Feed
 function boxH(){
   const s=state.scene; const ar=s?s.w/s.h:16/9;
   if(state.fmt==='square')return 1080; if(state.fmt==='tall')return 1350;
@@ -628,6 +629,12 @@ function draw(){
   }
   state.fitSize=size;
   let bh=Math.max(300,Math.min(boxH(),AVAIL-(headH+gap1+textH+gap2+FOOT)));
+  let alta=false;
+  // cena alta (ex.: aula em fundo branco): cabeçalho e frase sobem e a cena usa quase a tela toda, para aparecer inteira e grande
+  if(!fill&&state.scene&&state.fmt==='natural'&&state.zoom<=1.001){
+    const need=Math.round(W*state.scene.h/state.scene.w);
+    if(need>bh+40){bh=Math.max(bh,Math.min(need,H-2*CARD_MARGEM-(headH+gap1+textH+gap2+FOOT)));alta=true;}
+  }
   // preencher: cabeçalho e frase no topo da área do Feed; o vídeo ocupa toda a largura até o fim da tela
   const top=fill?FEED_TOP+10:Math.round((H-(headH+gap1+textH+gap2+bh+FOOT))/2);
   const ax=PAD,ay=top,ar=60;
@@ -657,7 +664,7 @@ function draw(){
     if(fill&&z<=1.001){ // preencher: o vídeo inteiro (sem cortar) e o resto da área com o próprio vídeo desfocado
       const k=Math.min(W/t.w,bh/t.h),dw=t.w*k,dh=t.h*k;
       state.layout={by,bh,sx:t.x,sy:t.y,sw:t.w,sh:t.h,dx:(W-dw)/2,dy:by+(bh-dh)/2,dw,dh,blur:dw<W-4||dh<bh-4};
-    }else if(!fill&&z<=1.001&&perda>.2){ // encaixar: mostra a cena inteira sem cortar
+    }else if(!fill&&z<=1.001&&(perda>.2||alta)){ // cena alta: sempre inteira, nunca corta título nem legenda // encaixar: mostra a cena inteira sem cortar
       const k=Math.min(W/t.w,bh/t.h),dw=t.w*k,dh=t.h*k;
       state.layout={by,bh,sx:t.x,sy:t.y,sw:t.w,sh:t.h,dx:(W-dw)/2,dy:by+(bh-dh)/2,dw,dh};
     }else state.layout={by,bh,sx:t.x+(t.w-sw)/2,sy:t.y+(t.h-sh)*state.pos,sw,sh,dx:0,dy:by,dw:W,dh:bh};
@@ -799,6 +806,8 @@ async function analyze(){
     const b=cb.box,ov=scene?Math.max(0,Math.min(scene.x+scene.w,b.x+b.w)-Math.max(scene.x,b.x))*Math.max(0,Math.min(scene.y+scene.h,b.y+b.h)-Math.max(scene.y,b.y)):1;
     if(!scene||ov>=.5*Math.min(scene.w*scene.h,b.w*b.h)){scene=b;semTexto=cb.blurOut;} // moldura borrada: o texto está dentro do quadro, não é frase de repost
   }
+  // vídeo de fundo claro liso (ex.: aulas de trader em fundo branco): a cena é tudo que tem conteúdo, em todos os quadros
+  if(!cb){const fb=flatLightBox(frames,sw,sh);if(fb){scene={x:fb.x*k,y:fb.y*k,w:fb.w*k,h:fb.h*k};semTexto=true;}}
   // conteúdo estático (texto): linhas com contraste fora da cena
   const mid=frames[Math.floor(N/2)];
   const rowStd=y=>{let s=0,s2=0;for(let x=0;x<sw;x++){const v=mid[y*sw+x];s+=v;s2+=v*v;}const m=s/sw;return Math.sqrt(Math.max(0,s2/sw-m*m));};
@@ -857,6 +866,25 @@ function detectContentBox(shots){
   if(!blurOut&&!flatOut)return null;
   const vw=vid.videoWidth,vh=vid.videoHeight,p=1;
   return {box:{x:(left+p)/A*vw,y:(top+p)/H2*vh,w:(right-left-2*p)/A*vw,h:(bot-top-2*p)/H2*vh},blurOut};
+}
+// Fundo claro e liso nas bordas em todos os quadros: devolve a caixa (em px da grade sw×sh) com todo o conteúdo + folga.
+function flatLightBox(frames,sw,sh){
+  const ring=[];const bx=Math.max(2,Math.round(sw*.04)),byy=Math.max(2,Math.round(sh*.03));
+  for(const g of frames)for(let y=0;y<sh;y++)for(let x=0;x<sw;x++)if(x<bx||x>=sw-bx||y<byy||y>=sh-byy)ring.push(g[y*sw+x]);
+  if(!ring.length)return null;
+  const srt=Float32Array.from(ring).sort(),bg=srt[srt.length>>1];
+  if(bg<200)return null; // só fundo claro (fundo preto é o padrão dos reposts com frase em cima)
+  let ok=0;for(const v of ring)if(Math.abs(v-bg)<18)ok++;
+  if(ok/ring.length<.9)return null;
+  const rowC=new Uint16Array(sh),colC=new Uint16Array(sw);
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){let c=false;for(const g of frames)if(Math.abs(g[y*sw+x]-bg)>24){c=true;break;}if(c){rowC[y]++;colC[x]++;}}
+  let y0=0,y1=sh-1,x0=0,x1=sw-1;
+  while(y0<sh-1&&rowC[y0]<2)y0++;while(y1>0&&rowC[y1]<2)y1--;
+  while(x0<sw-1&&colC[x0]<2)x0++;while(x1>0&&colC[x1]<2)x1--;
+  if(y1-y0<sh*.15||x1-x0<sw*.15)return null;
+  const py=Math.round(sh*.035);y0=Math.max(0,y0-py);y1=Math.min(sh-1,y1+py);
+  if(x1-x0>sw*.6){x0=0;x1=sw-1;}else{const px=Math.round(sw*.04);x0=Math.max(0,x0-px);x1=Math.min(sw-1,x1+px);}
+  return {x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
 }
 function clampRect(r){const vw=vid.videoWidth,vh=vid.videoHeight;const x=Math.max(0,Math.min(r.x,vw-8)),y=Math.max(0,Math.min(r.y,vh-8));return {x,y,w:Math.max(8,Math.min(r.w,vw-x)),h:Math.max(8,Math.min(r.h,vh-y))};}
 
@@ -1402,6 +1430,11 @@ async function loadVideo(file,opts={}){
   try{await analyze();}
   catch(e){state.analyzing=false;state.scene={x:0,y:0,w:vid.videoWidth,h:vid.videoHeight};state.text=null;
     an.className='status warn';an.textContent='Não consegui separar cena e texto. Usei o vídeo inteiro: ajuste a cena no mapa ou com o zoom.';}
+  if(opts.box){const b=opts.box,ar=vid.videoWidth/vid.videoHeight; // recorte marcado à mão (ferramenta de ajuste ou salvo para o autor)
+    if(!b.ar||Math.abs(b.ar-ar)/ar<.03){
+      state.scene=clampRect({x:b.x*vid.videoWidth,y:b.y*vid.videoHeight,w:b.w*vid.videoWidth,h:b.h*vid.videoHeight});
+      const t=state.text,r=state.scene;if(t&&t.x<r.x+r.w&&t.x+t.w>r.x&&t.y<r.y+r.h&&t.y+t.h>r.y)state.text=null; // texto dentro do recorte é do vídeo
+      an.className='status ok';an.textContent='Usei o recorte marcado à mão.';drawMap();}}
   $('exportBtn').disabled=false;$('playBtn').disabled=false;$('readBtn').disabled=false;
   $('meta').textContent=`1080 × 1920 · ${Math.round(vid.duration)} s · origem ${vid.videoWidth}×${vid.videoHeight}`;
   if(opts.noAI)state.pipeP=Promise.resolve(null);
@@ -1861,7 +1894,11 @@ if(!IN_VIEWER&&'serviceWorker' in navigator&&(location.protocol==='https:'||loca
 /* ---------- modo automático: fila do VPR Insta Full Postagens (Supabase) ---------- */
 // Contrato do VPR: tabela videos (numero, status, autor_origem, legenda, frases_alternativas, erro_msg…),
 // bucket videos com entrada/video-N.mp4 → prontos/video-N.mp4 + prontos/legenda-N.txt.
-const VPR_KEY='estudioCards.vpr',VPR_FRASES='estudioCards.vpr.frases';
+const VPR_KEY='estudioCards.vpr',VPR_FRASES='estudioCards.vpr.frases',RECORTES_KEY='estudioCards.recortes';
+// recorte marcado à mão, guardado por autor original (ex.: todos os vídeos de @trading.de.livro têm o mesmo layout)
+const autorKey=a=>String(a||'').replace(/^@/,'').trim().toLowerCase();
+function recorteDoAutor(a){const k=autorKey(a);return k?((lsGet(RECORTES_KEY)||{})[k]||null):null;}
+function salvarRecorte(a,box){const k=autorKey(a);if(!k)return;const r=lsGet(RECORTES_KEY)||{};if(box)r[k]=box;else delete r[k];lsSet(RECORTES_KEY,r);}
 const SB_JS='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
 const IS_IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const auto={on:false,busy:false,cur:null,wake:null,wakeT:null,list:[],sb:null,sbKey:'',iaFail:{}};
@@ -1984,7 +2021,7 @@ async function autoProcessCore(sb,v){
   setStep('Analisando cena e texto',18);
   $('ctxIn').value=String(v.legenda_origem||'').slice(0,1500); // legenda original ajuda a IA a entender o vídeo
   delete $('txt').dataset.touched;
-  if(!await loadVideo(file))throw new Error($('anStatus').textContent||'Não consegui abrir o vídeo.');
+  if(!await loadVideo(file,{box:recorteDoAutor(v.autor_origem)}))throw new Error($('anStatus').textContent||'Não consegui abrir o vídeo.');
   if(IS_IOS&&vid.duration>90)autoWarn(`video-${N} tem ${Math.round(vid.duration)} s: no iPhone, vídeos acima de 90 s podem travar. Se travar, rode o modo automático no Mac.`);
   setStep('Analisando a conexão',30);
   const plan=await state.pipeP;
@@ -2036,7 +2073,7 @@ async function autoLoop(){
     let sb;
     try{sb=await vprClient();if(!await vprUser())throw new Error('Entre na Conexão VPR (menu ⋮).');}
     catch(e){autoStop(autoErro(e));return;}
-    if(auto.busy){await autoSleep(2000);continue;} // revisão em andamento
+    if(auto.busy||auto.reserva){await autoSleep(2000);continue;} // revisão em andamento ou esperando a vez
     if(await checkUpdate())return; // versão nova publicada: recarrega e o rastreio volta sozinho
     let v=null;
     try{await refreshFila(sb);v=await claimNext(sb);}
@@ -2123,7 +2160,7 @@ setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').ge
 
 /* atualização sozinha: compara a versão do sw.js publicado com a desta página.
    Recarrega só quando nada está sendo editado (sem vídeo aberto no editor e sem render em andamento). */
-let APP_VER='78bef18bbd';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
+let APP_VER='3c2ac8a242';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
 async function swVer(){try{const t=await (await fetch('sw.js?v='+Date.now(),{cache:'no-store'})).text();return (/VERSION = "([^"]+)"/.exec(t)||[])[1]||null;}catch(e){return null;}}
 if(!IN_VIEWER&&!APP_VER)swVer().then(v=>{APP_VER=v;});
 async function checkUpdate(){
@@ -2151,12 +2188,72 @@ async function openReview(id){
   alts.forEach(f=>{const b=document.createElement('button');b.type='button';b.className='sug';
     const e=document.createElement('em');e.textContent='Usar esta e re-renderizar';const t=document.createElement('b');t.textContent=f;b.append(e,t);
     b.disabled=v.status!=='pronto';b.onclick=()=>reRender(v,f,atual,alts,st);box.appendChild(b);});
+  const ajb=document.createElement('button');ajb.type='button';ajb.className='btn';ajb.textContent='Ajustar recorte e cortes (mão)';
+  ajb.disabled=v.status!=='pronto';ajb.onclick=()=>openAjuste(v,atual,alts);
   const fechar=document.createElement('button');fechar.type='button';fechar.className='btn';fechar.textContent='Fechar revisão';fechar.onclick=()=>{box.hidden=true;};
-  box.append(st,fechar);
+  box.append(st,ajb,fechar);
 }
-async function reRender(v,frase,atual,alts,st){
-  if(auto.busy){st.className='status warn';st.textContent='Espere o vídeo atual terminar.';return;}
-  auto.busy=true;autoUI();st.className='status';
+/* ferramenta de ajuste: marcar à mão a área do vídeo (arrastando) e onde começa e termina; refaz o mesmo número */
+let ajVid=null;
+async function openAjuste(v,atual,alts){
+  const box=$('autoRev');box.hidden=false;box.textContent='Baixando o original para ajustar…';
+  let file;try{file=await baixarEntrada(await vprClient(),v);}catch(e){box.textContent='Não consegui baixar: '+autoErro(e);return;}
+  let frase=atual;
+  if(!frase){try{const sb=await vprClient();const {data}=await sb.from('videos').select('conexao').eq('id',v.id).single();frase=(data&&data.conexao&&data.conexao.frase_escolhida)||'';}catch(e){}}
+  if(ajVid){try{URL.revokeObjectURL(ajVid.src);}catch(e){}}
+  ajVid=document.createElement('video');ajVid.muted=true;ajVid.playsInline=true;ajVid.preload='auto';ajVid.src=URL.createObjectURL(file);
+  try{await new Promise((ok,no)=>{ajVid.onloadeddata=ok;ajVid.onerror=()=>no(new Error('vídeo não abriu'));setTimeout(()=>no(new Error('demorou demais')),20000);});}
+  catch(e){box.textContent='Não consegui abrir o original: '+autoErro(e);return;}
+  const vw=ajVid.videoWidth,vh=ajVid.videoHeight,dur=ajVid.duration||0;
+  let rec=recorteDoAutor(v.autor_origem),ini=0,fim=0,drag=null;
+  if(rec&&rec.ar&&Math.abs(rec.ar-vw/vh)/(vw/vh)>=.03)rec=null;
+  box.textContent='';
+  const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
+  box.append(el('b','', 'Ajustar video-'+v.numero+(v.autor_origem?' · @'+autorKey(v.autor_origem):'')),
+    el('p','hint','Arraste na imagem para marcar a área do vídeo que deve aparecer no card. Use a barra para andar no vídeo e marque onde começa e termina.'));
+  const cv2=el('canvas');cv2.width=Math.min(540,vw);cv2.height=Math.round(cv2.width*vh/vw);
+  cv2.style.cssText='width:100%;max-width:360px;align-self:center;border-radius:8px;touch-action:none;cursor:crosshair;background:#111';
+  const c2=cv2.getContext('2d');
+  const sl=el('input');sl.type='range';sl.min=0;sl.max=String(Math.round(dur*10));sl.value='0';sl.style.width='100%';
+  const tinfo=el('p','hint');
+  const draw2=()=>{c2.drawImage(ajVid,0,0,cv2.width,cv2.height);
+    const r=drag?{x:Math.min(drag.x0,drag.x1),y:Math.min(drag.y0,drag.y1),w:Math.abs(drag.x1-drag.x0),h:Math.abs(drag.y1-drag.y0)}:rec?{x:rec.x*cv2.width,y:rec.y*cv2.height,w:rec.w*cv2.width,h:rec.h*cv2.height}:null;
+    if(r){c2.save();c2.fillStyle='rgba(0,0,0,.55)';c2.fillRect(0,0,cv2.width,r.y);c2.fillRect(0,r.y+r.h,cv2.width,cv2.height-r.y-r.h);c2.fillRect(0,r.y,r.x,r.h);c2.fillRect(r.x+r.w,r.y,cv2.width-r.x-r.w,r.h);
+      c2.strokeStyle='#6fd08c';c2.lineWidth=3;c2.strokeRect(r.x,r.y,r.w,r.h);c2.restore();}
+    const t=ajVid.currentTime||0;
+    tinfo.textContent=`Agora: ${t.toFixed(1)} s de ${dur.toFixed(1)} s · Começa em ${ini.toFixed(1)} s · Termina em ${fim?fim.toFixed(1)+' s':'fim do vídeo'} · Recorte: ${rec?'marcado à mão':'automático'}`;};
+  const seek=t=>new Promise(ok=>{const f=()=>{ajVid.removeEventListener('seeked',f);ok();};ajVid.addEventListener('seeked',f);ajVid.currentTime=Math.max(0,Math.min(dur-.05,t));setTimeout(ok,1500);});
+  sl.oninput=async()=>{await seek(sl.value/10);draw2();};
+  const pt=e=>{const b=cv2.getBoundingClientRect();return {x:Math.max(0,Math.min(cv2.width,(e.clientX-b.left)*cv2.width/b.width)),y:Math.max(0,Math.min(cv2.height,(e.clientY-b.top)*cv2.height/b.height))};};
+  cv2.onpointerdown=e=>{cv2.setPointerCapture(e.pointerId);const p=pt(e);drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y};draw2();};
+  cv2.onpointermove=e=>{if(!drag)return;const p=pt(e);drag.x1=p.x;drag.y1=p.y;draw2();};
+  cv2.onpointerup=()=>{if(!drag)return;const w=Math.abs(drag.x1-drag.x0),h=Math.abs(drag.y1-drag.y0);
+    if(w>20&&h>20)rec={x:Math.min(drag.x0,drag.x1)/cv2.width,y:Math.min(drag.y0,drag.y1)/cv2.height,w:w/cv2.width,h:h/cv2.height,ar:vw/vh};
+    drag=null;draw2();};
+  const row=el('div');row.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
+  const bt=(t,f)=>{const b=el('button','btn',t);b.type='button';b.onclick=f;row.appendChild(b);return b;};
+  bt('Começar aqui',()=>{ini=Math.round((ajVid.currentTime||0)*10)/10;if(fim&&fim<=ini+1)fim=0;draw2();});
+  bt('Terminar aqui',()=>{const t=Math.round((ajVid.currentTime||0)*10)/10;if(t>ini+1)fim=t;draw2();});
+  bt('Sem cortes',()=>{ini=0;fim=0;draw2();});
+  bt('Recorte automático',()=>{rec=null;draw2();});
+  bt('Vídeo inteiro',()=>{rec={x:0,y:0,w:1,h:1,ar:vw/vh};draw2();});
+  const fl=el('label','hint','Frase do card');const fr=el('textarea');fr.rows=2;fr.value=frase||'';fr.style.cssText='width:100%;font:inherit;border-radius:8px;padding:8px;background:#111;color:#eee;border:1px solid #333';
+  const chkL=el('label','hint');const chk=el('input');chk.type='checkbox';chk.checked=true;chkL.append(chk,document.createTextNode(' Usar este recorte nos próximos vídeos de '+(v.autor_origem?'@'+autorKey(v.autor_origem):'deste autor')));
+  const st=el('div','status');
+  const go=el('button','btn gold','Refazer o vídeo com esses ajustes');go.type='button';
+  go.onclick=async()=>{
+    const f=fr.value.trim();if(!f){st.className='status warn';st.textContent='Escreva a frase do card.';return;}
+    if(chk.checked&&v.autor_origem)salvarRecorte(v.autor_origem,rec);
+    go.disabled=true;await reRender(v,f,atual,alts,st,{box:rec||undefined,start:ini,end:fim});go.disabled=false;};
+  const fechar=el('button','btn','Fechar');fechar.type='button';fechar.onclick=()=>{box.hidden=true;};
+  box.append(cv2,sl,tinfo,row,fl,fr,chkL,st,go,fechar);
+  await seek(Math.min(dur/2,dur-.1));sl.value=String(Math.round(ajVid.currentTime*10));draw2();
+}
+async function reRender(v,frase,atual,alts,st,aj={}){
+  if(auto.reserva){st.className='status warn';st.textContent='Já tem uma revisão esperando a vez.';return;}
+  st.className='status';
+  if(auto.busy){auto.reserva=true;st.textContent='Esperando o vídeo atual terminar para refazer este…';while(auto.busy)await new Promise(r=>setTimeout(r,2000));auto.reserva=false;}
+  auto.busy=true;autoUI();
   let sb,claimed=false,done=false;const antes=curId;
   try{
     sb=await vprClient();
@@ -2170,7 +2267,8 @@ async function reRender(v,frase,atual,alts,st){
     st.textContent='Baixando o original…';setStep('Revisão: baixando',10);
     const file=await baixarEntrada(sb,v);
     st.textContent='Abrindo o vídeo…';setStep('Revisão: analisando',25);
-    if(!await loadVideo(file,{noAI:true}))throw new Error($('anStatus').textContent);
+    if(!await loadVideo(file,{noAI:true,box:aj.box||recorteDoAutor(v.autor_origem)}))throw new Error($('anStatus').textContent);
+    if(aj.start!=null)state.corte=aj.start;if(aj.end!=null)state.corteFim=aj.end;
     $('txt').value=frase;
     st.textContent='Renderizando…';
     const out=await exportCard({noCaption:true,noPreview:true,onProgress:f=>setStep('Revisão: renderizando',30+f*60)});
@@ -2179,7 +2277,7 @@ async function reRender(v,frase,atual,alts,st){
     st.textContent='Enviando…';setStep('Revisão: enviando',95);
     const up=await sb.storage.from(vprBucket()).upload(`prontos/video-${v.numero}.mp4`,out.blob,{upsert:true,contentType:'video/mp4'});
     if(up.error)throw new Error(up.error.message);
-    const novas=[...(atual?[atual]:[]),...alts.filter(x=>x!==frase)];
+    const novas=[...(atual&&atual!==frase?[atual]:[]),...alts.filter(x=>x!==frase&&x!==atual)];
     const {error}=await sb.from('videos').update({status:'pronto',frases_alternativas:novas,erro_msg:null}).eq('id',v.id);
     if(error)throw new Error(error.message);claimed=false;
     const fr=lsGet(VPR_FRASES)||{};fr[v.numero]=frase;lsSet(VPR_FRASES,fr);
