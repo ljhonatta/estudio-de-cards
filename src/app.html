@@ -1828,10 +1828,19 @@ async function perfilDaConta(sb,contaId){
   if(!contaId)return {prof:null,fill:null};
   const {data}=await sb.from('contas').select('id,nome,ia_config').eq('id',contaId).maybeSingle();
   if(!data)return {prof:null,fill:null};
-  const ed=(data.ia_config&&data.ia_config.edicao)||{},h=String(data.nome||'').toLowerCase().trim();
-  const prof=profiles.find(p=>String(p.handle||'').toLowerCase()===h)||(ed.perfil?profiles.find(p=>String(p.name||'').toLowerCase().includes(String(ed.perfil).toLowerCase())):null);
-  if(!prof&&ed.perfil)throw new Error(`Crie o perfil ${data.nome} (${ed.perfil}) no Estúdio: menu ⋮ → Perfis, com o mesmo @.`);
+  const ed=(data.ia_config&&data.ia_config.edicao)||{};
+  const norm=x=>String(x||'').toLowerCase().replace(/[@\s]/g,'');
+  let prof=profiles.find(p=>norm(p.handle)===norm(data.nome))||(ed.perfil?profiles.find(p=>norm(p.name).includes(norm(ed.perfil))):null);
+  if(!prof&&ed.perfil)prof=await criarPerfilDaConta(data,ed); // perfil novo no VPR: o Estúdio cria sozinho (nome, @ e foto)
   return {prof,fill:typeof ed.preencher==='boolean'?ed.preencher:null};
+}
+async function criarPerfilDaConta(c,ed){
+  let av='';
+  try{const r=await fetch('avatars/'+c.id+'.jpg',{cache:'no-store'});if(r.ok){const b=await r.blob();av=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.onerror=()=>ok('');fr.readAsDataURL(b);});}}catch(e){}
+  let h=String(c.nome||'').trim();if(h&&!h.startsWith('@'))h='@'+h;
+  const x={id:'conta_'+c.id,name:String(ed.nome_card||ed.perfil||h).slice(0,40),handle:h,badge:true,avatar:av,about:String(ed.sobre||'')};
+  profiles.push(x);lsSet(PROF_KEY,profiles);renderProfSel();
+  return x;
 }
 async function autoProcess(sb,v){
   const pv=await perfilDaConta(sb,v.conta_id),antes=curId;
