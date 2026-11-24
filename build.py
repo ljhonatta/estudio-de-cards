@@ -44,13 +44,15 @@ img{max-width:100%}
 """
 TAIL = "\n</body>\n</html>\n"
 
+version = hashlib.sha1((HEAD + page).encode()).hexdigest()[:10]
+# a página sabe a própria versão (compara com o sw.js publicado para se atualizar sozinha)
+page = page.replace("__PAGE_VER__", version)
+
 (ROOT / "index.html").write_text(HEAD + page + TAIL, encoding="utf-8")
 
 dist = ROOT / "dist"
 dist.mkdir(exist_ok=True)
 (dist / "artifact.html").write_text(page, encoding="utf-8")
-
-version = hashlib.sha1((HEAD + page).encode()).hexdigest()[:10]
 sw = (SRC / "sw.template.js").read_text(encoding="utf-8").replace("__VERSION__", version)
 (ROOT / "sw.js").write_text(sw, encoding="utf-8")
 

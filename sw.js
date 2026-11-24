@@ -1,5 +1,5 @@
 // Service worker do Estúdio de Cards. A versão muda a cada build (build.py).
-const VERSION = "c4afb5d572";
+const VERSION = "626cce2ed1";
 const CACHE = "estudio-" + VERSION;
 const SHELL = [
   "./",
@@ -35,7 +35,7 @@ self.addEventListener("fetch", (e) => {
   // Página: tenta a rede primeiro (pega atualização), cai no cache offline
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: "no-cache", credentials: "same-origin" }) // sempre confere com o servidor: pega versão nova na hora
         .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)); return res; })
         .catch(() => caches.match("./index.html"))
     );

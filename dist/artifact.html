@@ -1997,9 +1997,9 @@ setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').ge
 
 /* atualização sozinha: compara a versão do sw.js publicado com a desta página.
    Recarrega só quando nada está sendo editado (sem vídeo aberto no editor e sem render em andamento). */
-let APP_VER=null;
+let APP_VER='626cce2ed1';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
 async function swVer(){try{const t=await (await fetch('sw.js?v='+Date.now(),{cache:'no-store'})).text();return (/VERSION = "([^"]+)"/.exec(t)||[])[1]||null;}catch(e){return null;}}
-if(!IN_VIEWER)swVer().then(v=>{APP_VER=v;});
+if(!IN_VIEWER&&!APP_VER)swVer().then(v=>{APP_VER=v;});
 async function checkUpdate(){
   if(IN_VIEWER||!APP_VER||auto.busy||state.exporting||state.hasVideo)return false;
   const v=await swVer();if(!v||v===APP_VER)return false;
