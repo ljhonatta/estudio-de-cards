@@ -741,6 +741,17 @@ async function analyze(){
   for(let p=0;p<sw*sh;p++){let m=0;for(let i=1;i<N;i++){const dd=Math.abs(frames[i][p]-frames[i-1][p]);if(dd>m)m=dd;}mov[p]=m>16?1:0;}
   const rowS=new Float32Array(sh);for(let y=0;y<sh;y++){let c=0;for(let x=0;x<sw;x++)c+=mov[y*sw+x];rowS[y]=c/sw;}
   let rr=longestRun(rowS,.06,3),scene=null;
+  // conteúdo espalhado (ex.: infográfico com título, gráfico e legenda que mudam): junta todas as faixas que se mexem
+  // (até linhas finas de gráfico que aparecem e somem). Créditos parados nas pontas (ex.: @ do autor no rodapé) ficam de fora.
+  {const mr=[];for(let y=0;y<sh;y++)if(rowS[y]>.02)mr.push(y);
+   if(mr.length){
+     const a=mr[0],b=mr[mr.length-1];
+     if(!rr||(b-a)>(rr[1]-rr[0])*1.15){
+       const g=frames[Math.floor(N/2)];let liso=0,tot=0;
+       for(let y=a;y<=b;y++){if(rowS[y]>.02)continue;let s1=0,s2=0;for(let x=0;x<sw;x++){const v=g[y*sw+x];s1+=v;s2+=v*v;}const m=s1/sw;tot++;if(Math.sqrt(Math.max(0,s2/sw-m*m))<14)liso++;}
+       if(!tot||liso/tot>.35)rr=[a,b];
+     }
+   }}
   if(rr&&(rr[1]-rr[0])>sh*.12){
     const colS=new Float32Array(sw);for(let x=0;x<sw;x++){let c=0;for(let y=rr[0];y<=rr[1];y++)c+=mov[y*sw+x];colS[x]=c/(rr[1]-rr[0]+1);}
     let cr=longestRun(colS,.04,4)||[0,sw-1];
@@ -753,7 +764,15 @@ async function analyze(){
   }
   // vídeo dentro de uma moldura (cópia borrada ou faixas lisas): usa exatamente o quadro nítido
   let semTexto=false;
-  const cb=detectContentBox(state.shots.filter(x=>x.dataset.main));
+  let cb=detectContentBox(state.shots.filter(x=>x.dataset.main));
+  if(cb){ // moldura de verdade não muda: se algo se mexe fora do quadro (ex.: legenda acima de um gráfico), não é moldura
+    let fora=0,tf=0;const bx0=cb.box.x/k,by0=cb.box.y/k,bx1=(cb.box.x+cb.box.w)/k,by1=(cb.box.y+cb.box.h)/k;
+    for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){if(x>=bx0-1&&x<=bx1+1&&y>=by0-1&&y<=by1+1)continue;tf++;
+      if(!mov[y*sw+x])continue;const q=y*sw+x;let nit=false; // movimento nítido (letras, linhas) e não o borrado mexendo
+      for(const g of frames)if(Math.abs(g[q+1]-g[q-1])+Math.abs(g[q+sw]-g[q-sw])>45){nit=true;break;}
+      if(nit)fora++;}
+    if(tf&&fora/tf>.004)cb=null;
+  }
   if(cb){
     const b=cb.box,ov=scene?Math.max(0,Math.min(scene.x+scene.w,b.x+b.w)-Math.max(scene.x,b.x))*Math.max(0,Math.min(scene.y+scene.h,b.y+b.h)-Math.max(scene.y,b.y)):1;
     if(!scene||ov>=.5*Math.min(scene.w*scene.h,b.w*b.h)){scene=b;semTexto=cb.blurOut;} // moldura borrada: o texto está dentro do quadro, não é frase de repost
@@ -2082,7 +2101,7 @@ setInterval(()=>{if(!auto.busy||$('pageAuto').hidden)return;try{$('autoPrev').ge
 
 /* atualização sozinha: compara a versão do sw.js publicado com a desta página.
    Recarrega só quando nada está sendo editado (sem vídeo aberto no editor e sem render em andamento). */
-let APP_VER='8319f550e3';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
+let APP_VER='4c5c99e54c';if(APP_VER.startsWith('__'))APP_VER=null; // versão gravada no build (antes vinha do sw.js e uma página velha se achava atualizada)
 async function swVer(){try{const t=await (await fetch('sw.js?v='+Date.now(),{cache:'no-store'})).text();return (/VERSION = "([^"]+)"/.exec(t)||[])[1]||null;}catch(e){return null;}}
 if(!IN_VIEWER&&!APP_VER)swVer().then(v=>{APP_VER=v;});
 async function checkUpdate(){
